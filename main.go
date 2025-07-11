@@ -21,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -64,6 +65,19 @@ var (
 )
 
 func main() {
+	// Load .env file (try .env.local first, then .env)
+	err := godotenv.Load(".env.local")
+	if err != nil {
+		err = godotenv.Load(".env")
+		if err != nil {
+			log.Printf("Warning: Error loading .env files: %v", err)
+		}
+	}
+
+	// Check if COGNITO_USER_POOL_ID is loaded correctly
+	userPoolID := os.Getenv("COGNITO_USER_POOL_ID")
+	fmt.Println("COGNITO_USER_POOL_ID:", userPoolID)
+
 	// Initialize AWS Cognito client
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -92,7 +106,169 @@ func main() {
 }
 
 func publicHandler(c echo.Context) error {
-	return c.String(http.StatusOK, "Public Page")
+	html := `<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubsCDeck - Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            color: #155724;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>SubsCDeck ログイン</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">ユーザー名:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">パスワード:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" id="loginBtn">ログイン</button>
+        </form>
+        <div id="errorMessage" class="error"></div>
+        <div id="successMessage" class="success"></div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            
+            // Hide previous messages
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            
+            // Disable button during request
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'ログイン中...';
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Success - display JWT token in console and show success message
+                    console.log('ログイン成功！');
+                    console.log('JWT Access Token:', data.access_token);
+                    console.log('JWT ID Token:', data.id_token);
+                    console.log('Refresh Token:', data.refresh_token);
+                    console.log('Expires In:', data.expires_in, 'seconds');
+                    console.log('Token Type:', data.token_type);
+                    
+                    successMessage.textContent = 'ログインに成功しました！JWTトークンがブラウザのコンソールに出力されました。';
+                    successMessage.style.display = 'block';
+                    
+                    // Clear form
+                    document.getElementById('loginForm').reset();
+                } else {
+                    // Error
+                    errorMessage.textContent = data.message || 'ログインに失敗しました。';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorMessage.textContent = 'ネットワークエラーが発生しました。';
+                errorMessage.style.display = 'block';
+            } finally {
+                // Re-enable button
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'ログイン';
+            }
+        });
+    </script>
+</body>
+</html>`
+	return c.HTML(http.StatusOK, html)
 }
 
 func protectedHandler(c echo.Context) error {
@@ -141,15 +317,28 @@ func loginHandler(c echo.Context) error {
 		AuthParameters: authParams,
 	}
 
+	// Log the request parameters for debugging
+	log.Printf("Attempting login for user: %s", req.Username)
+	log.Printf("Using User Pool ID: %s", userPoolID)
+	log.Printf("Using Client ID: %s", clientID)
+	log.Printf("Client Secret configured: %t", clientSecret != "")
+
 	// Call Cognito InitiateAuth
 	result, err := cognitoClient.InitiateAuth(c.Request().Context(), input)
 	if err != nil {
 		// Log the error for debugging
 		log.Printf("Cognito InitiateAuth error: %v", err)
+		log.Printf("Error type: %T", err)
 		
 		// Check if it's an authentication error
 		if strings.Contains(err.Error(), "NotAuthorizedException") {
 			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid username or password")
+		}
+		if strings.Contains(err.Error(), "UserNotFoundException") {
+			return echo.NewHTTPError(http.StatusUnauthorized, "User not found")
+		}
+		if strings.Contains(err.Error(), "InvalidParameterException") {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request parameters")
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Authentication failed: %v", err))
 	}

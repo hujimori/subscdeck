@@ -1,1 +1,2 @@
 - Cognitoってどうやるんだっけ？
+- gemini cliとclaude codeを連携させたほうが楽かも
