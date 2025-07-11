@@ -189,6 +189,10 @@ func publicHandler(c echo.Context) error {
 <body>
     <div class="login-container">
         <h1>SubsCDeck ログイン</h1>
+        <div id="protectedContent" style="display: none; margin-bottom: 20px; padding: 15px; background-color: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px; color: #2e7d32;">
+            <strong>Protected Page Response:</strong>
+            <div id="protectedResponse"></div>
+        </div>
         <form id="loginForm">
             <div class="form-group">
                 <label for="username">ユーザー名:</label>
@@ -245,11 +249,14 @@ func publicHandler(c echo.Context) error {
                     console.log('Expires In:', data.expires_in, 'seconds');
                     console.log('Token Type:', data.token_type);
                     
-                    successMessage.textContent = 'ログインに成功しました！JWTトークンがブラウザのコンソールに出力されました。';
+                    successMessage.textContent = 'ログインに成功しました！JWTトークンがブラウザのコンソールに出力され、保護されたページにアクセスしています...';
                     successMessage.style.display = 'block';
                     
                     // Clear form
                     document.getElementById('loginForm').reset();
+                    
+                    // Call protected endpoint with the access token
+                    await callProtectedEndpoint(data.access_token);
                 } else {
                     // Error
                     errorMessage.textContent = data.message || 'ログインに失敗しました。';
@@ -265,6 +272,44 @@ func publicHandler(c echo.Context) error {
                 loginBtn.textContent = 'ログイン';
             }
         });
+        
+        // Function to call protected endpoint with JWT token
+        async function callProtectedEndpoint(accessToken) {
+            const protectedContent = document.getElementById('protectedContent');
+            const protectedResponse = document.getElementById('protectedResponse');
+            
+            try {
+                console.log('Calling protected endpoint with token:', accessToken);
+                
+                const response = await fetch('/protected', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const responseText = await response.text();
+                    console.log('Protected endpoint response:', responseText);
+                    
+                    // Display the response in the div
+                    protectedResponse.textContent = responseText;
+                    protectedContent.style.display = 'block';
+                    
+                    // Update success message
+                    const successMessage = document.getElementById('successMessage');
+                    successMessage.textContent = 'ログイン成功！JWTトークンでの認証も成功し、保護されたページにアクセスできました。';
+                } else {
+                    console.error('Protected endpoint failed:', response.status, response.statusText);
+                    protectedResponse.textContent = 'Error: ' + response.status + ' ' + response.statusText;
+                    protectedContent.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error calling protected endpoint:', error);
+                protectedResponse.textContent = 'Network error occurred while calling protected endpoint';
+                protectedContent.style.display = 'block';
+            }
+        }
     </script>
 </body>
 </html>`
