@@ -249,6 +249,10 @@ func publicHandler(c echo.Context) error {
                     console.log('Expires In:', data.expires_in, 'seconds');
                     console.log('Token Type:', data.token_type);
                     
+                    // Save access token to localStorage
+                    localStorage.setItem('accessToken', data.access_token);
+                    console.log('トークンを保存しました');
+                    
                     successMessage.textContent = 'ログインに成功しました！JWTトークンがブラウザのコンソールに出力され、保護されたページにアクセスしています...';
                     successMessage.style.display = 'block';
                     
