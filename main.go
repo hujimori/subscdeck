@@ -64,6 +64,11 @@ type Subscription struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type CreateSubscriptionRequest struct {
+	ServiceName string `json:"service_name"`
+	Price       int    `json:"price"`
+}
+
 var (
 	jwksCache     *JWKSResponse
 	jwksCacheTime time.Time
@@ -112,6 +117,7 @@ func main() {
 	e.POST("/login", loginHandler)
 	e.GET("/protected", protectedHandler, cognitoAuthMiddleware())
 	e.GET("/dashboard", dashboardHandler)
+	e.POST("/api/subscriptions", createSubscriptionHandler, cognitoAuthMiddleware())
 
 	// Start server
 	port := os.Getenv("PORT")
@@ -494,27 +500,60 @@ func dashboardHandler(c echo.Context) error {
         }
 
         // フォーム送信処理
-        document.getElementById('subscriptionForm').addEventListener('submit', function(e) {
+        document.getElementById('subscriptionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const serviceName = document.getElementById('service_name').value;
             const price = parseInt(document.getElementById('price').value);
+            const token = localStorage.getItem('accessToken');
             
-            // 新しいサブスクリプションを追加
-            const newSub = {
-                id: Date.now().toString(),
-                service_name: serviceName,
-                price: price,
-                created_at: new Date()
-            };
+            if (!token) {
+                alert('ログインが必要です');
+                window.location.href = '/';
+                return;
+            }
             
-            subscriptions.unshift(newSub);
-            
-            // フォームをクリア
-            document.getElementById('subscriptionForm').reset();
-            
-            // 一覧を再表示
-            displaySubscriptions();
+            try {
+                const response = await fetch('/api/subscriptions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        service_name: serviceName,
+                        price: price
+                    })
+                });
+                
+                if (response.ok) {
+                    const newSub = await response.json();
+                    
+                    // 新しいサブスクリプションを追加
+                    subscriptions.unshift({
+                        id: newSub.id,
+                        service_name: newSub.service_name,
+                        price: newSub.price,
+                        created_at: new Date(newSub.created_at)
+                    });
+                    
+                    // フォームをクリア
+                    document.getElementById('subscriptionForm').reset();
+                    
+                    // 一覧を再表示
+                    displaySubscriptions();
+                } else if (response.status === 401) {
+                    alert('認証エラー: ログインし直してください');
+                    localStorage.removeItem('accessToken');
+                    window.location.href = '/';
+                } else {
+                    const error = await response.json();
+                    alert('エラー: ' + (error.message || 'サブスクリプションの登録に失敗しました'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('ネットワークエラーが発生しました');
+            }
         });
 
         // 初回表示
@@ -769,4 +808,34 @@ func jwkToRSAPublicKey(jwk *JWK) (*rsa.PublicKey, error) {
 	}
 
 	return pubKey, nil
+}
+
+func createSubscriptionHandler(c echo.Context) error {
+	// Parse request body
+	var req CreateSubscriptionRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate input
+	if req.ServiceName == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Service name is required")
+	}
+	if req.Price <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "Price must be greater than 0")
+	}
+
+	// Create new subscription (in a real app, this would save to database)
+	newSub := Subscription{
+		ID:          fmt.Sprintf("%d", time.Now().UnixNano()),
+		ServiceName: req.ServiceName,
+		Price:       req.Price,
+		CreatedAt:   time.Now(),
+	}
+
+	// Add to our in-memory list
+	subscriptions = append([]Subscription{newSub}, subscriptions...)
+
+	// Return the created subscription
+	return c.JSON(http.StatusCreated, newSub)
 }
