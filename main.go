@@ -57,11 +57,26 @@ type LoginResponse struct {
 	TokenType    string `json:"token_type"`
 }
 
+type Subscription struct {
+	ID          string    `json:"id"`
+	ServiceName string    `json:"service_name"`
+	Price       int       `json:"price"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 var (
 	jwksCache     *JWKSResponse
 	jwksCacheTime time.Time
 	cacheDuration = 1 * time.Hour
 	cognitoClient *cognitoidentityprovider.Client
+	// ダミーのサブスクリプションデータ
+	subscriptions = []Subscription{
+		{ID: "1", ServiceName: "Netflix", Price: 1490, CreatedAt: time.Now().AddDate(0, -3, 0)},
+		{ID: "2", ServiceName: "AWS", Price: 5000, CreatedAt: time.Now().AddDate(0, -6, 0)},
+		{ID: "3", ServiceName: "Spotify", Price: 980, CreatedAt: time.Now().AddDate(0, -2, 0)},
+		{ID: "4", ServiceName: "Adobe Creative Cloud", Price: 6480, CreatedAt: time.Now().AddDate(0, -1, 0)},
+		{ID: "5", ServiceName: "GitHub Pro", Price: 1100, CreatedAt: time.Now().AddDate(0, -4, 0)},
+	}
 )
 
 func main() {
@@ -96,6 +111,7 @@ func main() {
 	e.GET("/", publicHandler)
 	e.POST("/login", loginHandler)
 	e.GET("/protected", protectedHandler, cognitoAuthMiddleware())
+	e.GET("/dashboard", dashboardHandler)
 
 	// Start server
 	port := os.Getenv("PORT")
@@ -189,10 +205,6 @@ func publicHandler(c echo.Context) error {
 <body>
     <div class="login-container">
         <h1>SubsCDeck ログイン</h1>
-        <div id="protectedContent" style="display: none; margin-bottom: 20px; padding: 15px; background-color: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px; color: #2e7d32;">
-            <strong>Protected Page Response:</strong>
-            <div id="protectedResponse"></div>
-        </div>
         <form id="loginForm">
             <div class="form-group">
                 <label for="username">ユーザー名:</label>
@@ -253,14 +265,16 @@ func publicHandler(c echo.Context) error {
                     localStorage.setItem('accessToken', data.access_token);
                     console.log('トークンを保存しました');
                     
-                    successMessage.textContent = 'ログインに成功しました！JWTトークンがブラウザのコンソールに出力され、保護されたページにアクセスしています...';
+                    successMessage.textContent = 'ログインに成功しました！ダッシュボードに移動します...';
                     successMessage.style.display = 'block';
                     
                     // Clear form
                     document.getElementById('loginForm').reset();
                     
-                    // Call protected endpoint with the access token
-                    await callProtectedEndpoint(data.access_token);
+                    // Redirect to dashboard after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
                 } else {
                     // Error
                     errorMessage.textContent = data.message || 'ログインに失敗しました。';
@@ -276,44 +290,6 @@ func publicHandler(c echo.Context) error {
                 loginBtn.textContent = 'ログイン';
             }
         });
-        
-        // Function to call protected endpoint with JWT token
-        async function callProtectedEndpoint(accessToken) {
-            const protectedContent = document.getElementById('protectedContent');
-            const protectedResponse = document.getElementById('protectedResponse');
-            
-            try {
-                console.log('Calling protected endpoint with token:', accessToken);
-                
-                const response = await fetch('/protected', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': 'Bearer ' + accessToken
-                    }
-                });
-                
-                if (response.ok) {
-                    const responseText = await response.text();
-                    console.log('Protected endpoint response:', responseText);
-                    
-                    // Display the response in the div
-                    protectedResponse.textContent = responseText;
-                    protectedContent.style.display = 'block';
-                    
-                    // Update success message
-                    const successMessage = document.getElementById('successMessage');
-                    successMessage.textContent = 'ログイン成功！JWTトークンでの認証も成功し、保護されたページにアクセスできました。';
-                } else {
-                    console.error('Protected endpoint failed:', response.status, response.statusText);
-                    protectedResponse.textContent = 'Error: ' + response.status + ' ' + response.statusText;
-                    protectedContent.style.display = 'block';
-                }
-            } catch (error) {
-                console.error('Error calling protected endpoint:', error);
-                protectedResponse.textContent = 'Network error occurred while calling protected endpoint';
-                protectedContent.style.display = 'block';
-            }
-        }
     </script>
 </body>
 </html>`
@@ -321,7 +297,232 @@ func publicHandler(c echo.Context) error {
 }
 
 func protectedHandler(c echo.Context) error {
-	return c.String(http.StatusOK, "Protected Page")
+	return c.String(http.StatusOK, "Protected API endpoint - Authentication successful")
+}
+
+func dashboardHandler(c echo.Context) error {
+	html := `<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubscDeck - サブスクリプション管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        .form-section h2 {
+            margin-top: 0;
+            color: #555;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 12px 24px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .subscription-list {
+            margin-top: 30px;
+        }
+        .subscription-list h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .subscription-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .subscription-info {
+            flex: 1;
+        }
+        .subscription-name {
+            font-weight: bold;
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .subscription-price {
+            color: #dc3545;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .subscription-date {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .total-section {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #e7f3ff;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            text-align: right;
+        }
+        .total-label {
+            font-size: 18px;
+            color: #333;
+            margin-right: 10px;
+        }
+        .total-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <h1>SubscDeck</h1>
+    <div class="container">
+        <div class="form-section">
+            <h2>新規サブスクリプション登録</h2>
+            <form id="subscriptionForm">
+                <div class="form-group">
+                    <label for="service_name">サービス名:</label>
+                    <input type="text" id="service_name" name="service_name" required placeholder="例: Netflix, Spotify">
+                </div>
+                <div class="form-group">
+                    <label for="price">月額料金 (円):</label>
+                    <input type="number" id="price" name="price" required placeholder="例: 1490">
+                </div>
+                <button type="submit">登録</button>
+            </form>
+        </div>
+
+        <div class="subscription-list">
+            <h2>登録済みサブスクリプション</h2>
+            <div id="subscriptionList"></div>
+            <div class="total-section">
+                <span class="total-label">月額合計:</span>
+                <span class="total-amount" id="totalAmount">¥0</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // トークンチェック - ログインしていない場合はリダイレクト
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/';
+        }
+
+        // ダミーデータのサブスクリプション
+        const subscriptions = [
+            {id: "1", service_name: "Netflix", price: 1490, created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)},
+            {id: "2", service_name: "AWS", price: 5000, created_at: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000)},
+            {id: "3", service_name: "Spotify", price: 980, created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)},
+            {id: "4", service_name: "Adobe Creative Cloud", price: 6480, created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)},
+            {id: "5", service_name: "GitHub Pro", price: 1100, created_at: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000)}
+        ];
+
+        // サブスクリプション一覧を表示
+        function displaySubscriptions() {
+            const listContainer = document.getElementById('subscriptionList');
+            listContainer.innerHTML = '';
+            let total = 0;
+
+            subscriptions.forEach(sub => {
+                const item = document.createElement('div');
+                item.className = 'subscription-item';
+                
+                const createdDate = new Date(sub.created_at).toLocaleDateString('ja-JP');
+                
+                item.innerHTML = ` + "`" + `
+                    <div class="subscription-info">
+                        <div class="subscription-name">${sub.service_name}</div>
+                        <div class="subscription-date">登録日: ${createdDate}</div>
+                    </div>
+                    <div class="subscription-price">¥${sub.price.toLocaleString()}</div>
+                ` + "`" + `;
+                
+                listContainer.appendChild(item);
+                total += sub.price;
+            });
+
+            // 合計金額を更新
+            document.getElementById('totalAmount').textContent = '¥' + total.toLocaleString();
+        }
+
+        // フォーム送信処理
+        document.getElementById('subscriptionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const serviceName = document.getElementById('service_name').value;
+            const price = parseInt(document.getElementById('price').value);
+            
+            // 新しいサブスクリプションを追加
+            const newSub = {
+                id: Date.now().toString(),
+                service_name: serviceName,
+                price: price,
+                created_at: new Date()
+            };
+            
+            subscriptions.unshift(newSub);
+            
+            // フォームをクリア
+            document.getElementById('subscriptionForm').reset();
+            
+            // 一覧を再表示
+            displaySubscriptions();
+        });
+
+        // 初回表示
+        displaySubscriptions();
+    </script>
+</body>
+</html>`
+	return c.HTML(http.StatusOK, html)
 }
 
 // calculateSecretHash computes the SECRET_HASH for Cognito
