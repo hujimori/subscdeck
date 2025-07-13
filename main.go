@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"subscdeck/internal/model"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
@@ -58,13 +60,6 @@ type LoginResponse struct {
 	TokenType    string `json:"token_type"`
 }
 
-type Subscription struct {
-	ID          string    `json:"id"`
-	ServiceName string    `json:"service_name"`
-	Price       int       `json:"price"`
-	CreatedAt   time.Time `json:"created_at"`
-}
-
 type CreateSubscriptionRequest struct {
 	ServiceName string `json:"service_name"`
 	Price       int    `json:"price"`
@@ -76,7 +71,7 @@ var (
 	cacheDuration = 1 * time.Hour
 	cognitoClient *cognitoidentityprovider.Client
 	// ダミーのサブスクリプションデータ
-	subscriptions = []Subscription{
+	subscriptions = []model.Subscription{
 		{ID: "1", ServiceName: "Netflix", Price: 1490, CreatedAt: time.Now().AddDate(0, -3, 0)},
 		{ID: "2", ServiceName: "AWS", Price: 5000, CreatedAt: time.Now().AddDate(0, -6, 0)},
 		{ID: "3", ServiceName: "Spotify", Price: 980, CreatedAt: time.Now().AddDate(0, -2, 0)},
@@ -410,7 +405,7 @@ func createSubscriptionHandler(c echo.Context) error {
 	}
 
 	// Create new subscription (in a real app, this would save to database)
-	newSub := Subscription{
+	newSub := model.Subscription{
 		ID:          fmt.Sprintf("%d", time.Now().UnixNano()),
 		ServiceName: req.ServiceName,
 		Price:       req.Price,
@@ -418,7 +413,7 @@ func createSubscriptionHandler(c echo.Context) error {
 	}
 
 	// Add to our in-memory list
-	subscriptions = append([]Subscription{newSub}, subscriptions...)
+	subscriptions = append([]model.Subscription{newSub}, subscriptions...)
 
 	// Return the created subscription
 	return c.JSON(http.StatusCreated, newSub)
