@@ -7,12 +7,13 @@ import (
 	"os"
 
 	"subscdeck/internal/handler"
+	"subscdeck/internal/middleware"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	echomiddleware "github.com/labstack/echo/v4/middleware"
 )
 
 
@@ -44,15 +45,15 @@ func main() {
 	e := echo.New()
 
 	// Middleware
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+	e.Use(echomiddleware.Logger())
+	e.Use(echomiddleware.Recover())
 
 	// Routes
 	e.GET("/", handler.PublicHandler)
 	e.POST("/login", handler.LoginHandler)
-	e.GET("/protected", handler.ProtectedHandler, handler.CognitoAuthMiddleware())
+	e.GET("/protected", handler.ProtectedHandler, middleware.CognitoAuthMiddleware())
 	e.GET("/dashboard", handler.DashboardHandler)
-	e.POST("/api/subscriptions", handler.CreateSubscriptionHandler, handler.CognitoAuthMiddleware())
+	e.POST("/api/subscriptions", handler.CreateSubscriptionHandler, middleware.CognitoAuthMiddleware())
 
 	// Start server
 	port := os.Getenv("PORT")
