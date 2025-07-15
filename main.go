@@ -54,6 +54,7 @@ func main() {
 	e.GET("/protected", handler.ProtectedHandler, middleware.CognitoAuthMiddleware())
 	e.GET("/dashboard", handler.DashboardHandler)
 	e.POST("/api/subscriptions", handler.CreateSubscriptionHandler, middleware.CognitoAuthMiddleware())
+	e.POST("/subscriptions/delete", handler.DeleteSubscriptionHandler, middleware.CognitoAuthMiddleware())
 
 	// Start server
 	port := os.Getenv("PORT")

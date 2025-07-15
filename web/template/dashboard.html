@@ -63,6 +63,15 @@
         button:hover {
             background-color: #218838;
         }
+        .delete-btn {
+            background-color: #dc3545;
+            padding: 8px 16px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
         .subscription-list {
             margin-top: 30px;
         }
@@ -180,6 +189,7 @@
                         <div class="subscription-date">登録日: ${createdDate}</div>
                     </div>
                     <div class="subscription-price">¥${sub.price.toLocaleString()}</div>
+                    <button type="button" class="delete-btn" onclick="deleteSubscription('${sub.id}')">削除</button>
                 `;
                 
                 listContainer.appendChild(item);
@@ -246,6 +256,53 @@
                 alert('ネットワークエラーが発生しました');
             }
         });
+
+        // 削除関数
+        async function deleteSubscription(id) {
+            if (!confirm('このサブスクリプションを削除しますか？')) {
+                return;
+            }
+            
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                alert('ログインが必要です');
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('id', id);
+                
+                const response = await fetch('/subscriptions/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    // 削除成功 - ローカルのデータからも削除
+                    const index = subscriptions.findIndex(sub => sub.id === id);
+                    if (index > -1) {
+                        subscriptions.splice(index, 1);
+                    }
+                    // 画面を再表示
+                    displaySubscriptions();
+                } else if (response.status === 401) {
+                    alert('認証エラー: ログインし直してください');
+                    localStorage.removeItem('accessToken');
+                    window.location.href = '/';
+                } else {
+                    const error = await response.text();
+                    alert('エラー: ' + error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('ネットワークエラーが発生しました');
+            }
+        }
 
         // 初回表示
         displaySubscriptions();

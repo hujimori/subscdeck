@@ -39,6 +39,10 @@ type CreateSubscriptionRequest struct {
 	Price       int    `json:"price"`
 }
 
+type DeleteSubscriptionRequest struct {
+	ID string `form:"id"`
+}
+
 var (
 	cognitoClient *cognitoidentityprovider.Client
 	// ダミーのサブスクリプションデータ
@@ -190,4 +194,30 @@ func CreateSubscriptionHandler(c echo.Context) error {
 
 	// Return the created subscription
 	return c.JSON(http.StatusCreated, newSub)
+}
+
+func DeleteSubscriptionHandler(c echo.Context) error {
+	// Parse request body
+	var req DeleteSubscriptionRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate input
+	if req.ID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "ID is required")
+	}
+
+	// Find and remove the subscription
+	for i, sub := range subscriptions {
+		if sub.ID == req.ID {
+			// Remove from slice
+			subscriptions = append(subscriptions[:i], subscriptions[i+1:]...)
+			// Redirect to dashboard
+			return c.Redirect(http.StatusSeeOther, "/dashboard")
+		}
+	}
+
+	// If not found, return error
+	return echo.NewHTTPError(http.StatusNotFound, "Subscription not found")
 }
