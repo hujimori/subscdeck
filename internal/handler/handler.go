@@ -4,15 +4,15 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
-	"subscdeck/internal/model"
+	"subscdeck/internal/database"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
@@ -45,14 +45,6 @@ type DeleteSubscriptionRequest struct {
 
 var (
 	cognitoClient *cognitoidentityprovider.Client
-	// ダミーのサブスクリプションデータ
-	subscriptions = []model.Subscription{
-		{ID: "1", ServiceName: "Netflix", Price: 1490, CreatedAt: time.Now().AddDate(0, -3, 0)},
-		{ID: "2", ServiceName: "AWS", Price: 5000, CreatedAt: time.Now().AddDate(0, -6, 0)},
-		{ID: "3", ServiceName: "Spotify", Price: 980, CreatedAt: time.Now().AddDate(0, -2, 0)},
-		{ID: "4", ServiceName: "Adobe Creative Cloud", Price: 6480, CreatedAt: time.Now().AddDate(0, -1, 0)},
-		{ID: "5", ServiceName: "GitHub Pro", Price: 1100, CreatedAt: time.Now().AddDate(0, -4, 0)},
-	}
 )
 
 // SetCognitoClient sets the Cognito client for the handler
@@ -73,11 +65,33 @@ func ProtectedHandler(c echo.Context) error {
 }
 
 func DashboardHandler(c echo.Context) error {
+	// Get all subscriptions from database
+	subscriptions, err := database.GetAllSubscriptions()
+	if err != nil {
+		log.Printf("Error fetching subscriptions: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch subscriptions")
+	}
+
 	tmpl, err := template.ParseFiles("web/template/dashboard.html")
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load template")
 	}
-	return tmpl.Execute(c.Response(), nil)
+	
+	// JSONエンコードしてテンプレートに渡す
+	subscriptionsJSON, err := json.Marshal(subscriptions)
+	if err != nil {
+		log.Printf("Error marshaling subscriptions: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to process subscriptions")
+	}
+	
+	// Pass subscriptions to template
+	data := struct {
+		SubscriptionsJSON template.JS
+	}{
+		SubscriptionsJSON: template.JS(subscriptionsJSON),
+	}
+	
+	return tmpl.Execute(c.Response(), data)
 }
 
 // calculateSecretHash computes the SECRET_HASH for Cognito
@@ -181,16 +195,12 @@ func CreateSubscriptionHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Price must be greater than 0")
 	}
 
-	// Create new subscription (in a real app, this would save to database)
-	newSub := model.Subscription{
-		ID:          fmt.Sprintf("%d", time.Now().UnixNano()),
-		ServiceName: req.ServiceName,
-		Price:       req.Price,
-		CreatedAt:   time.Now(),
+	// Create new subscription in database
+	newSub, err := database.CreateSubscription(req.ServiceName, req.Price)
+	if err != nil {
+		log.Printf("Error creating subscription: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create subscription")
 	}
-
-	// Add to our in-memory list
-	subscriptions = append([]model.Subscription{newSub}, subscriptions...)
 
 	// Return the created subscription
 	return c.JSON(http.StatusCreated, newSub)
@@ -208,16 +218,13 @@ func DeleteSubscriptionHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "ID is required")
 	}
 
-	// Find and remove the subscription
-	for i, sub := range subscriptions {
-		if sub.ID == req.ID {
-			// Remove from slice
-			subscriptions = append(subscriptions[:i], subscriptions[i+1:]...)
-			// Redirect to dashboard
-			return c.Redirect(http.StatusSeeOther, "/dashboard")
-		}
+	// Delete from database
+	err := database.DeleteSubscription(req.ID)
+	if err != nil {
+		log.Printf("Error deleting subscription: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete subscription")
 	}
 
-	// If not found, return error
-	return echo.NewHTTPError(http.StatusNotFound, "Subscription not found")
+	// Redirect to dashboard
+	return c.Redirect(http.StatusSeeOther, "/dashboard")
 }

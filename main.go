@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"subscdeck/internal/database"
 	"subscdeck/internal/handler"
 	"subscdeck/internal/middleware"
 
@@ -30,6 +31,13 @@ func main() {
 	// Check if COGNITO_USER_POOL_ID is loaded correctly
 	userPoolID := os.Getenv("COGNITO_USER_POOL_ID")
 	fmt.Println("COGNITO_USER_POOL_ID:", userPoolID)
+
+	// Initialize SQLite database
+	err = database.InitDB("subscdeck.db")
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer database.Close()
 
 	// Initialize AWS Cognito client
 	ctx := context.Background()

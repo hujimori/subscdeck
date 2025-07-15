@@ -162,14 +162,11 @@
             window.location.href = '/';
         }
 
-        // ダミーデータのサブスクリプション
-        const subscriptions = [
-            {id: "1", service_name: "Netflix", price: 1490, created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)},
-            {id: "2", service_name: "AWS", price: 5000, created_at: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000)},
-            {id: "3", service_name: "Spotify", price: 980, created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)},
-            {id: "4", service_name: "Adobe Creative Cloud", price: 6480, created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)},
-            {id: "5", service_name: "GitHub Pro", price: 1100, created_at: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000)}
-        ];
+        // サーバーから取得したサブスクリプションデータを使用
+        const subscriptions = {{ .SubscriptionsJSON }}.map(sub => ({
+            ...sub,
+            created_at: new Date(sub.created_at)
+        }));
 
         // サブスクリプション一覧を表示
         function displaySubscriptions() {
