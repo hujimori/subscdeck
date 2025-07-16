@@ -130,6 +130,7 @@
 <body>
     <h1>SubscDeck</h1>
     <div class="container">
+        {{ if .IsLoggedIn }}
         <div class="form-section">
             <h2>新規サブスクリプション登録</h2>
             <form id="subscriptionForm">
@@ -144,6 +145,12 @@
                 <button type="submit">登録</button>
             </form>
         </div>
+        {{ else }}
+        <div class="form-section">
+            <h2>ログインが必要です</h2>
+            <p>サブスクリプションの登録・削除をするには<a href="/">ログイン</a>してください。</p>
+        </div>
+        {{ end }}
 
         <div class="subscription-list">
             <h2>登録済みサブスクリプション</h2>
@@ -156,17 +163,62 @@
     </div>
 
     <script>
-        // トークンチェック - ログインしていない場合はリダイレクト
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-            window.location.href = '/';
-        }
+        // ログイン状態をサーバーから取得
+        const isLoggedIn = {{ .IsLoggedIn }};
+        
+        // 古いローカルストレージのトークンを削除（クッキーベースに移行）
+        localStorage.removeItem('accessToken');
 
-        // サーバーから取得したサブスクリプションデータを使用
-        const subscriptions = {{ .SubscriptionsJSON }}.map(sub => ({
-            ...sub,
-            created_at: new Date(sub.created_at)
-        }));
+        // サブスクリプションデータを格納する配列
+        let subscriptions = [];
+
+        // サブスクリプション一覧を取得する関数
+        async function fetchSubscriptions() {
+            try {
+                const response = await fetch('/api/subscriptions');
+                
+                // レスポンスのContent-Typeを確認
+                const contentType = response.headers.get('content-type');
+                console.log('Response status:', response.status);
+                console.log('Content-Type:', contentType);
+                
+                if (response.status === 401) {
+                    // ログインが必要
+                    alert('ログインが必要です');
+                    window.location.href = '/';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    console.error('Failed to fetch subscriptions:', response.status);
+                    alert('サブスクリプションの取得に失敗しました');
+                    return;
+                }
+                
+                // JSONレスポンスかどうかを確認
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    // nullの場合は空配列として扱う
+                    subscriptions = data ? data.map(sub => ({
+                        ...sub,
+                        created_at: new Date(sub.created_at)
+                    })) : [];
+                    
+                    // 画面を更新
+                    displaySubscriptions();
+                } else {
+                    // HTMLレスポンス（リダイレクトなど）の場合
+                    console.error('Unexpected response type:', contentType);
+                    const text = await response.text();
+                    console.log('Response body:', text.substring(0, 200));
+                    alert('予期しないレスポンスが返されました');
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error fetching subscriptions:', error);
+                alert('ネットワークエラーが発生しました');
+            }
+        }
 
         // サブスクリプション一覧を表示
         function displaySubscriptions() {
@@ -186,7 +238,7 @@
                         <div class="subscription-date">登録日: ${createdDate}</div>
                     </div>
                     <div class="subscription-price">¥${sub.price.toLocaleString()}</div>
-                    <button type="button" class="delete-btn" onclick="deleteSubscription('${sub.id}')">削除</button>
+                    {{ if .IsLoggedIn }}<button type="button" class="delete-btn" onclick="deleteSubscription('${sub.id}')">削除</button>{{ end }}
                 `;
                 
                 listContainer.appendChild(item);
@@ -197,15 +249,15 @@
             document.getElementById('totalAmount').textContent = '¥' + total.toLocaleString();
         }
 
-        // フォーム送信処理
-        document.getElementById('subscriptionForm').addEventListener('submit', async function(e) {
+        // フォーム送信処理 - フォームが存在する場合のみ
+        const subscriptionForm = document.getElementById('subscriptionForm');
+        if (subscriptionForm) {
+            subscriptionForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const serviceName = document.getElementById('service_name').value;
             const price = parseInt(document.getElementById('price').value);
-            const token = localStorage.getItem('accessToken');
-            
-            if (!token) {
+            if (!isLoggedIn) {
                 alert('ログインが必要です');
                 window.location.href = '/';
                 return;
@@ -215,8 +267,7 @@
                 const response = await fetch('/api/subscriptions', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + token
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         service_name: serviceName,
@@ -236,13 +287,12 @@
                     });
                     
                     // フォームをクリア
-                    document.getElementById('subscriptionForm').reset();
+                    subscriptionForm.reset();
                     
                     // 一覧を再表示
                     displaySubscriptions();
                 } else if (response.status === 401) {
                     alert('認証エラー: ログインし直してください');
-                    localStorage.removeItem('accessToken');
                     window.location.href = '/';
                 } else {
                     const error = await response.json();
@@ -252,7 +302,8 @@
                 console.error('Error:', error);
                 alert('ネットワークエラーが発生しました');
             }
-        });
+            });
+        }
 
         // 削除関数
         async function deleteSubscription(id) {
@@ -260,8 +311,7 @@
                 return;
             }
             
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
+            if (!isLoggedIn) {
                 alert('ログインが必要です');
                 window.location.href = '/';
                 return;
@@ -273,9 +323,6 @@
                 
                 const response = await fetch('/subscriptions/delete', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer ' + token
-                    },
                     body: formData
                 });
                 
@@ -289,7 +336,6 @@
                     displaySubscriptions();
                 } else if (response.status === 401) {
                     alert('認証エラー: ログインし直してください');
-                    localStorage.removeItem('accessToken');
                     window.location.href = '/';
                 } else {
                     const error = await response.text();
@@ -301,8 +347,8 @@
             }
         }
 
-        // 初回表示
-        displaySubscriptions();
+        // 初回表示 - APIからデータを取得
+        fetchSubscriptions();
     </script>
 </body>
 </html>

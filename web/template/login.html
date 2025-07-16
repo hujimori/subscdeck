@@ -129,17 +129,9 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    // Success - display JWT token in console and show success message
+                    // Success - JWTはHTTPOnlyクッキーとして自動で保存される
                     console.log('ログイン成功！');
-                    console.log('JWT Access Token:', data.access_token);
-                    console.log('JWT ID Token:', data.id_token);
-                    console.log('Refresh Token:', data.refresh_token);
-                    console.log('Expires In:', data.expires_in, 'seconds');
-                    console.log('Token Type:', data.token_type);
-                    
-                    // Save access token to localStorage
-                    localStorage.setItem('accessToken', data.access_token);
-                    console.log('トークンを保存しました');
+                    console.log('認証クッキーが設定されました');
                     
                     successMessage.textContent = 'ログインに成功しました！ダッシュボードに移動します...';
                     successMessage.style.display = 'block';

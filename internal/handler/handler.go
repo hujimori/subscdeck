@@ -84,11 +84,17 @@ func DashboardHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to process subscriptions")
 	}
 	
-	// Pass subscriptions to template
+	// Check if user is logged in by checking if user context exists
+	userContext := c.Get("user")
+	isLoggedIn := userContext != nil
+	
+	// Pass subscriptions and login status to template
 	data := struct {
 		SubscriptionsJSON template.JS
+		IsLoggedIn        bool
 	}{
 		SubscriptionsJSON: template.JS(subscriptionsJSON),
+		IsLoggedIn:        isLoggedIn,
 	}
 	
 	return tmpl.Execute(c.Response(), data)
@@ -167,9 +173,21 @@ func LoginHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "No authentication result received")
 	}
 
-	// Prepare response
+	// Set JWT as HTTPOnly cookie
+	accessToken := aws.ToString(result.AuthenticationResult.AccessToken)
+	cookie := &http.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		Path:     "/",
+		MaxAge:   int(result.AuthenticationResult.ExpiresIn),
+	}
+	c.SetCookie(cookie)
+
+	// Return JSON response for AJAX requests
 	response := LoginResponse{
-		AccessToken:  aws.ToString(result.AuthenticationResult.AccessToken),
+		AccessToken:  accessToken,
 		IDToken:      aws.ToString(result.AuthenticationResult.IdToken),
 		RefreshToken: aws.ToString(result.AuthenticationResult.RefreshToken),
 		ExpiresIn:    result.AuthenticationResult.ExpiresIn,
@@ -179,6 +197,17 @@ func LoginHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
+func GetSubscriptionsHandler(c echo.Context) error {
+	// Get all subscriptions from database
+	subscriptions, err := database.GetAllSubscriptions()
+	if err != nil {
+		log.Printf("Error fetching subscriptions: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch subscriptions")
+	}
+
+	// Return subscriptions as JSON
+	return c.JSON(http.StatusOK, subscriptions)
+}
 
 func CreateSubscriptionHandler(c echo.Context) error {
 	// Parse request body

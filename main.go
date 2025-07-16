@@ -60,7 +60,8 @@ func main() {
 	e.GET("/", handler.PublicHandler)
 	e.POST("/login", handler.LoginHandler)
 	e.GET("/protected", handler.ProtectedHandler, middleware.CognitoAuthMiddleware())
-	e.GET("/dashboard", handler.DashboardHandler)
+	e.GET("/dashboard", handler.DashboardHandler, middleware.CognitoAuthMiddleware())
+	e.GET("/api/subscriptions", handler.GetSubscriptionsHandler, middleware.CognitoAuthMiddleware())
 	e.POST("/api/subscriptions", handler.CreateSubscriptionHandler, middleware.CognitoAuthMiddleware())
 	e.POST("/subscriptions/delete", handler.DeleteSubscriptionHandler, middleware.CognitoAuthMiddleware())
 

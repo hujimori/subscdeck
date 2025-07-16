@@ -52,15 +52,23 @@ func CognitoAuthMiddleware() echo.MiddlewareFunc {
 				return echo.NewHTTPError(http.StatusInternalServerError, "Server configuration error")
 			}
 
-			// Extract token from Authorization header
+			// Extract token from Authorization header or cookie
+			var tokenString string
+			
+			// Try Authorization header first
 			authHeader := c.Request().Header.Get("Authorization")
-			if authHeader == "" {
-				return echo.NewHTTPError(http.StatusUnauthorized, "Missing authorization header")
-			}
-
-			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenString == authHeader {
-				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid authorization header format")
+			if authHeader != "" {
+				tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+				if tokenString == authHeader {
+					return echo.NewHTTPError(http.StatusUnauthorized, "Invalid authorization header format")
+				}
+			} else {
+				// Try cookie if no Authorization header
+				cookie, err := c.Cookie("access_token")
+				if err != nil {
+					return echo.NewHTTPError(http.StatusUnauthorized, "Missing authorization token")
+				}
+				tokenString = cookie.Value
 			}
 
 			// Verify token
