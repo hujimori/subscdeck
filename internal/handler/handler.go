@@ -53,6 +53,12 @@ type UpdateSubscriptionRequest struct {
 	Price       int    `json:"price"`
 }
 
+type UpdateSubscriptionFormRequest struct {
+	ID          string `form:"id"`
+	ServiceName string `form:"service_name"`
+	Price       int    `form:"price"`
+}
+
 var (
 	cognitoClient *cognitoidentityprovider.Client
 )
@@ -339,4 +345,33 @@ func UpdateSubscriptionHandler(c echo.Context) error {
 
 	// Return the updated subscription
 	return c.JSON(http.StatusOK, updatedSub)
+}
+
+func UpdateSubscriptionFormHandler(c echo.Context) error {
+	// Parse form data
+	var req UpdateSubscriptionFormRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid form data")
+	}
+
+	// Validate input
+	if req.ID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "ID is required")
+	}
+	if req.ServiceName == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Service name is required")
+	}
+	if req.Price <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "Price must be greater than 0")
+	}
+
+	// Update subscription in database
+	_, err := database.UpdateSubscription(req.ID, req.ServiceName, req.Price)
+	if err != nil {
+		log.Printf("Error updating subscription: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update subscription")
+	}
+
+	// Redirect to dashboard
+	return c.Redirect(http.StatusSeeOther, "/dashboard")
 }
