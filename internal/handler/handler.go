@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"subscdeck/internal/database"
+	"subscdeck/internal/model"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
@@ -41,6 +42,15 @@ type CreateSubscriptionRequest struct {
 
 type DeleteSubscriptionRequest struct {
 	ID string `form:"id"`
+}
+
+type EditSubscriptionRequest struct {
+	ID string `query:"id"`
+}
+
+type UpdateSubscriptionRequest struct {
+	ServiceName string `json:"service_name"`
+	Price       int    `json:"price"`
 }
 
 var (
@@ -256,4 +266,77 @@ func DeleteSubscriptionHandler(c echo.Context) error {
 
 	// Redirect to dashboard
 	return c.Redirect(http.StatusSeeOther, "/dashboard")
+}
+
+func EditSubscriptionHandler(c echo.Context) error {
+	// Parse query parameter
+	var req EditSubscriptionRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request parameters")
+	}
+
+	// Validate input
+	if req.ID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "ID is required")
+	}
+
+	// Get subscription from database
+	subscription, err := database.GetSubscriptionByID(req.ID)
+	if err != nil {
+		log.Printf("Error fetching subscription: %v", err)
+		return echo.NewHTTPError(http.StatusNotFound, "Subscription not found")
+	}
+
+	// Check if user is logged in by checking if user context exists
+	userContext := c.Get("user")
+	isLoggedIn := userContext != nil
+	
+	// Load template
+	tmpl, err := template.ParseFiles("web/template/edit.html")
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load template")
+	}
+	
+	// Pass subscription data and login status to template
+	data := struct {
+		Subscription *model.Subscription
+		IsLoggedIn   bool
+	}{
+		Subscription: subscription,
+		IsLoggedIn:   isLoggedIn,
+	}
+	
+	return tmpl.Execute(c.Response(), data)
+}
+
+func UpdateSubscriptionHandler(c echo.Context) error {
+	// Get ID from URL path
+	id := c.Param("id")
+	if id == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "ID is required")
+	}
+
+	// Parse request body
+	var req UpdateSubscriptionRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate input
+	if req.ServiceName == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Service name is required")
+	}
+	if req.Price <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "Price must be greater than 0")
+	}
+
+	// Update subscription in database
+	updatedSub, err := database.UpdateSubscription(id, req.ServiceName, req.Price)
+	if err != nil {
+		log.Printf("Error updating subscription: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update subscription")
+	}
+
+	// Return the updated subscription
+	return c.JSON(http.StatusOK, updatedSub)
 }

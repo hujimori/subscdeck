@@ -90,6 +90,35 @@ func CreateSubscription(serviceName string, price int) (*model.Subscription, err
 	}, nil
 }
 
+// GetSubscriptionByID retrieves a single subscription by ID
+func GetSubscriptionByID(id string) (*model.Subscription, error) {
+	row := db.QueryRow("SELECT id, service_name, price, created_at FROM subscriptions WHERE id = ?", id)
+	
+	var sub model.Subscription
+	var dbID int
+	err := row.Scan(&dbID, &sub.ServiceName, &sub.Price, &sub.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	
+	sub.ID = strconv.Itoa(dbID)
+	return &sub, nil
+}
+
+// UpdateSubscription updates a subscription in the database
+func UpdateSubscription(id, serviceName string, price int) (*model.Subscription, error) {
+	_, err := db.Exec(
+		"UPDATE subscriptions SET service_name = ?, price = ? WHERE id = ?",
+		serviceName, price, id,
+	)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Return the updated subscription
+	return GetSubscriptionByID(id)
+}
+
 // DeleteSubscription removes a subscription from the database
 func DeleteSubscription(id string) error {
 	_, err := db.Exec("DELETE FROM subscriptions WHERE id = ?", id)

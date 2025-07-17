@@ -63,7 +63,9 @@ func main() {
 	e.GET("/dashboard", handler.DashboardHandler, middleware.CognitoAuthMiddleware())
 	e.GET("/api/subscriptions", handler.GetSubscriptionsHandler, middleware.CognitoAuthMiddleware())
 	e.POST("/api/subscriptions", handler.CreateSubscriptionHandler, middleware.CognitoAuthMiddleware())
+	e.PUT("/api/subscriptions/:id", handler.UpdateSubscriptionHandler, middleware.CognitoAuthMiddleware())
 	e.POST("/subscriptions/delete", handler.DeleteSubscriptionHandler, middleware.CognitoAuthMiddleware())
+	e.GET("/subscriptions/edit", handler.EditSubscriptionHandler, middleware.CognitoAuthMiddleware())
 
 	// Start server
 	port := os.Getenv("PORT")

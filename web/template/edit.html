@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>編集 - SubscDeck</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        .form-section h2 {
+            margin-top: 0;
+            color: #555;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 12px 24px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .cancel-btn {
+            background-color: #6c757d;
+        }
+        .cancel-btn:hover {
+            background-color: #545b62;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .error-message {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .success-message {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>サブスクリプション編集</h1>
+    <div class="container">
+        <a href="/dashboard" class="back-link">← ダッシュボードに戻る</a>
+        
+        <div id="errorMessage" class="error-message"></div>
+        <div id="successMessage" class="success-message"></div>
+        
+        {{ if .IsLoggedIn }}
+        <div class="form-section">
+            <h2>サブスクリプション情報を編集</h2>
+            <form id="editSubscriptionForm">
+                <input type="hidden" id="subscription_id" value="{{ .Subscription.ID }}">
+                <div class="form-group">
+                    <label for="service_name">サービス名:</label>
+                    <input type="text" id="service_name" name="service_name" value="{{ .Subscription.ServiceName }}" required placeholder="例: Netflix, Spotify">
+                </div>
+                <div class="form-group">
+                    <label for="price">月額料金 (円):</label>
+                    <input type="number" id="price" name="price" value="{{ .Subscription.Price }}" required placeholder="例: 1490">
+                </div>
+                <button type="submit">更新</button>
+                <button type="button" class="cancel-btn" onclick="window.location.href='/dashboard'">キャンセル</button>
+            </form>
+        </div>
+        {{ else }}
+        <div class="form-section">
+            <h2>ログインが必要です</h2>
+            <p>サブスクリプションの編集をするには<a href="/">ログイン</a>してください。</p>
+        </div>
+        {{ end }}
+    </div>
+
+    <script>
+        // ログイン状態をサーバーから取得
+        const isLoggedIn = {{ .IsLoggedIn }};
+        
+        // フォーム送信処理
+        const editForm = document.getElementById('editSubscriptionForm');
+        if (editForm) {
+            editForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const subscriptionId = document.getElementById('subscription_id').value;
+                const serviceName = document.getElementById('service_name').value;
+                const price = parseInt(document.getElementById('price').value);
+                
+                if (!isLoggedIn) {
+                    showError('ログインが必要です');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/subscriptions/${subscriptionId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            service_name: serviceName,
+                            price: price
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        showSuccess('サブスクリプションが更新されました');
+                        // 2秒後にダッシュボードにリダイレクト
+                        setTimeout(() => {
+                            window.location.href = '/dashboard';
+                        }, 2000);
+                    } else if (response.status === 401) {
+                        showError('認証エラー: ログインし直してください');
+                    } else {
+                        const error = await response.json();
+                        showError('エラー: ' + (error.message || 'サブスクリプションの更新に失敗しました'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showError('ネットワークエラーが発生しました');
+                }
+            });
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            const successDiv = document.getElementById('successMessage');
+            
+            successDiv.style.display = 'none';
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function showSuccess(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            const successDiv = document.getElementById('successMessage');
+            
+            errorDiv.style.display = 'none';
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

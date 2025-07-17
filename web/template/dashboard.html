@@ -72,6 +72,21 @@
         .delete-btn:hover {
             background-color: #c82333;
         }
+        .edit-btn {
+            background-color: #007bff;
+            padding: 8px 16px;
+            font-size: 14px;
+            margin-left: 10px;
+            text-decoration: none;
+            color: white;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .edit-btn:hover {
+            background-color: #0056b3;
+            text-decoration: none;
+            color: white;
+        }
         .subscription-list {
             margin-top: 30px;
         }
@@ -238,7 +253,10 @@
                         <div class="subscription-date">登録日: ${createdDate}</div>
                     </div>
                     <div class="subscription-price">¥${sub.price.toLocaleString()}</div>
-                    {{ if .IsLoggedIn }}<button type="button" class="delete-btn" onclick="deleteSubscription('${sub.id}')">削除</button>{{ end }}
+                    {{ if .IsLoggedIn }}
+                        <a href="/subscriptions/edit?id=${sub.id}" class="edit-btn">編集</a>
+                        <button type="button" class="delete-btn" onclick="deleteSubscription('${sub.id}')">削除</button>
+                    {{ end }}
                 `;
                 
                 listContainer.appendChild(item);
