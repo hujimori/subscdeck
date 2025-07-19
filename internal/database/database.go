@@ -97,10 +97,10 @@ func GetAllSubscriptions() ([]model.Subscription, error) {
 }
 
 // CreateSubscription inserts a new subscription into the database
-func CreateSubscription(serviceName string, price int) (*model.Subscription, error) {
+func CreateSubscription(serviceName string, price int, userID string) (*model.Subscription, error) {
 	result, err := db.Exec(
-		"INSERT INTO subscriptions (service_name, price, usage_unit, created_at) VALUES (?, ?, ?, ?)",
-		serviceName, price, "", time.Now(),
+		"INSERT INTO subscriptions (service_name, price, usage_unit, user_id, created_at) VALUES (?, ?, ?, ?, ?)",
+		serviceName, price, "", userID, time.Now(),
 	)
 	if err != nil {
 		return nil, err
@@ -116,6 +116,7 @@ func CreateSubscription(serviceName string, price int) (*model.Subscription, err
 		ServiceName: serviceName,
 		Price:       price,
 		UsageUnit:   "",
+		UserID:      userID,
 		CreatedAt:   time.Now(),
 	}, nil
 }

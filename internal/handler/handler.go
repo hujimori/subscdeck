@@ -244,8 +244,24 @@ func CreateSubscriptionHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Price must be greater than 0")
 	}
 
+	// Get user info from JWT context (set by auth middleware)
+	userContext := c.Get("user")
+	if userContext == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "User not authenticated")
+	}
+	
+	// Extract user ID from JWT claims
+	userID := "unknown_user" // Default fallback
+	if userClaims, ok := userContext.(map[string]interface{}); ok {
+		if sub, exists := userClaims["sub"]; exists {
+			if subStr, ok := sub.(string); ok {
+				userID = subStr
+			}
+		}
+	}
+
 	// Create new subscription in database
-	newSub, err := database.CreateSubscription(req.ServiceName, req.Price)
+	newSub, err := database.CreateSubscription(req.ServiceName, req.Price, userID)
 	if err != nil {
 		log.Printf("Error creating subscription: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create subscription")
