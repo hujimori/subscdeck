@@ -28,6 +28,7 @@ func InitDB(dbPath string) error {
 		service_name TEXT NOT NULL,
 		price INTEGER NOT NULL,
 		usage_unit TEXT DEFAULT '',
+		user_id TEXT DEFAULT '',
 		created_at DATETIME NOT NULL
 	);`
 
@@ -38,6 +39,12 @@ func InitDB(dbPath string) error {
 
 	// Add usage_unit column to existing subscriptions table if it doesn't exist
 	_, err = db.Exec("ALTER TABLE subscriptions ADD COLUMN usage_unit TEXT DEFAULT ''")
+	if err != nil {
+		// Column might already exist, ignore the error
+	}
+
+	// Add user_id column to existing subscriptions table if it doesn't exist
+	_, err = db.Exec("ALTER TABLE subscriptions ADD COLUMN user_id TEXT DEFAULT ''")
 	if err != nil {
 		// Column might already exist, ignore the error
 	}
@@ -68,7 +75,7 @@ func GetDB() *sql.DB {
 
 // GetAllSubscriptions retrieves all subscriptions from the database
 func GetAllSubscriptions() ([]model.Subscription, error) {
-	rows, err := db.Query("SELECT id, service_name, price, COALESCE(usage_unit, '') as usage_unit, created_at FROM subscriptions ORDER BY created_at DESC")
+	rows, err := db.Query("SELECT id, service_name, price, COALESCE(usage_unit, '') as usage_unit, COALESCE(user_id, '') as user_id, created_at FROM subscriptions ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +85,7 @@ func GetAllSubscriptions() ([]model.Subscription, error) {
 	for rows.Next() {
 		var sub model.Subscription
 		var id int
-		err := rows.Scan(&id, &sub.ServiceName, &sub.Price, &sub.UsageUnit, &sub.CreatedAt)
+		err := rows.Scan(&id, &sub.ServiceName, &sub.Price, &sub.UsageUnit, &sub.UserID, &sub.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -115,11 +122,11 @@ func CreateSubscription(serviceName string, price int) (*model.Subscription, err
 
 // GetSubscriptionByID retrieves a single subscription by ID
 func GetSubscriptionByID(id string) (*model.Subscription, error) {
-	row := db.QueryRow("SELECT id, service_name, price, COALESCE(usage_unit, '') as usage_unit, created_at FROM subscriptions WHERE id = ?", id)
+	row := db.QueryRow("SELECT id, service_name, price, COALESCE(usage_unit, '') as usage_unit, COALESCE(user_id, '') as user_id, created_at FROM subscriptions WHERE id = ?", id)
 	
 	var sub model.Subscription
 	var dbID int
-	err := row.Scan(&dbID, &sub.ServiceName, &sub.Price, &sub.UsageUnit, &sub.CreatedAt)
+	err := row.Scan(&dbID, &sub.ServiceName, &sub.Price, &sub.UsageUnit, &sub.UserID, &sub.CreatedAt)
 	if err != nil {
 		return nil, err
 	}

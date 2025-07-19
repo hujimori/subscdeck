@@ -8,6 +8,7 @@ type Subscription struct {
 	ServiceName string    `json:"service_name"`
 	Price       int       `json:"price"`
 	UsageUnit   string    `json:"usage_unit"`
+	UserID      string    `json:"user_id"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
