@@ -311,8 +311,24 @@ func DeleteSubscriptionHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "ID is required")
 	}
 
-	// Delete from database
-	err := database.DeleteSubscription(req.ID)
+	// Get user info from JWT context (set by auth middleware)
+	userContext := c.Get("user")
+	if userContext == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "User not authenticated")
+	}
+	
+	// Extract user ID from JWT claims
+	userID := "unknown_user" // Default fallback
+	if userClaims, ok := userContext.(map[string]interface{}); ok {
+		if sub, exists := userClaims["sub"]; exists {
+			if subStr, ok := sub.(string); ok {
+				userID = subStr
+			}
+		}
+	}
+
+	// Delete from database (only user's own subscription)
+	err := database.DeleteSubscription(req.ID, userID)
 	if err != nil {
 		log.Printf("Error deleting subscription: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete subscription")

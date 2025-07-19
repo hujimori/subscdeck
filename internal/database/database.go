@@ -173,9 +173,9 @@ func CreateUsageLog(subscriptionID int, userID string) (*model.UsageLog, error) 
 	}, nil
 }
 
-// DeleteSubscription removes a subscription from the database
-func DeleteSubscription(id string) error {
-	_, err := db.Exec("DELETE FROM subscriptions WHERE id = ?", id)
+// DeleteSubscription removes a subscription from the database for a specific user
+func DeleteSubscription(id string, userID string) error {
+	_, err := db.Exec("DELETE FROM subscriptions WHERE id = ? AND user_id = ?", id, userID)
 	return err
 }
 
