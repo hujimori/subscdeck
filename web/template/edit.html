@@ -120,6 +120,10 @@
                     <label for="price">月額料金 (円):</label>
                     <input type="number" id="price" name="price" value="{{ .Subscription.Price }}" required placeholder="例: 1490">
                 </div>
+                <div class="form-group">
+                    <label for="usage_unit">利用単位:</label>
+                    <input type="text" id="usage_unit" name="usage_unit" value="{{ .Subscription.UsageUnit }}" placeholder="例: 回, 時間, 本, 曲">
+                </div>
                 <button type="submit">更新</button>
                 <button type="button" class="cancel-btn" onclick="window.location.href='/dashboard'">キャンセル</button>
             </form>

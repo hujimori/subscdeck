@@ -97,10 +97,10 @@ func GetAllSubscriptions(userID string) ([]model.Subscription, error) {
 }
 
 // CreateSubscription inserts a new subscription into the database
-func CreateSubscription(serviceName string, price int, userID string) (*model.Subscription, error) {
+func CreateSubscription(serviceName string, price int, usageUnit string, userID string) (*model.Subscription, error) {
 	result, err := db.Exec(
 		"INSERT INTO subscriptions (service_name, price, usage_unit, user_id, created_at) VALUES (?, ?, ?, ?, ?)",
-		serviceName, price, "", userID, time.Now(),
+		serviceName, price, usageUnit, userID, time.Now(),
 	)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func CreateSubscription(serviceName string, price int, userID string) (*model.Su
 		ID:                strconv.FormatInt(id, 10),
 		ServiceName:       serviceName,
 		Price:             price,
-		UsageUnit:         "",
+		UsageUnit:         usageUnit,
 		UserID:            userID,
 		MonthlyUsageCount: 0, // 新規作成時は0回
 		CreatedAt:         time.Now(),
@@ -138,10 +138,10 @@ func GetSubscriptionByID(id string, userID string) (*model.Subscription, error) 
 }
 
 // UpdateSubscription updates a subscription in the database for a specific user
-func UpdateSubscription(id, serviceName string, price int, userID string) (*model.Subscription, error) {
+func UpdateSubscription(id, serviceName string, price int, usageUnit string, userID string) (*model.Subscription, error) {
 	_, err := db.Exec(
-		"UPDATE subscriptions SET service_name = ?, price = ? WHERE id = ? AND user_id = ?",
-		serviceName, price, id, userID,
+		"UPDATE subscriptions SET service_name = ?, price = ?, usage_unit = ? WHERE id = ? AND user_id = ?",
+		serviceName, price, usageUnit, id, userID,
 	)
 	if err != nil {
 		return nil, err

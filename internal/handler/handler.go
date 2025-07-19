@@ -39,6 +39,7 @@ type LoginResponse struct {
 type CreateSubscriptionRequest struct {
 	ServiceName string `json:"service_name"`
 	Price       int    `json:"price"`
+	UsageUnit   string `json:"usage_unit"`
 }
 
 type DeleteSubscriptionRequest struct {
@@ -52,12 +53,14 @@ type EditSubscriptionRequest struct {
 type UpdateSubscriptionRequest struct {
 	ServiceName string `json:"service_name"`
 	Price       int    `json:"price"`
+	UsageUnit   string `json:"usage_unit"`
 }
 
 type UpdateSubscriptionFormRequest struct {
 	ID          string `form:"id"`
 	ServiceName string `form:"service_name"`
 	Price       int    `form:"price"`
+	UsageUnit   string `form:"usage_unit"`
 }
 
 type CreateUsageLogRequest struct {
@@ -330,7 +333,7 @@ func CreateSubscriptionHandler(c echo.Context) error {
 	}
 
 	// Create new subscription in database
-	newSub, err := database.CreateSubscription(req.ServiceName, req.Price, userID)
+	newSub, err := database.CreateSubscription(req.ServiceName, req.Price, req.UsageUnit, userID)
 	if err != nil {
 		log.Printf("Error creating subscription: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create subscription")
@@ -473,7 +476,7 @@ func UpdateSubscriptionHandler(c echo.Context) error {
 	}
 
 	// Update subscription in database
-	updatedSub, err := database.UpdateSubscription(id, req.ServiceName, req.Price, userID)
+	updatedSub, err := database.UpdateSubscription(id, req.ServiceName, req.Price, req.UsageUnit, userID)
 	if err != nil {
 		log.Printf("Error updating subscription: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update subscription")
@@ -518,7 +521,7 @@ func UpdateSubscriptionFormHandler(c echo.Context) error {
 	}
 
 	// Update subscription in database
-	_, err := database.UpdateSubscription(req.ID, req.ServiceName, req.Price, userID)
+	_, err := database.UpdateSubscription(req.ID, req.ServiceName, req.Price, req.UsageUnit, userID)
 	if err != nil {
 		log.Printf("Error updating subscription: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update subscription")

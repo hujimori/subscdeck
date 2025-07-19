@@ -175,6 +175,10 @@
                     <label for="price">月額料金 (円):</label>
                     <input type="number" id="price" name="price" required placeholder="例: 1490">
                 </div>
+                <div class="form-group">
+                    <label for="usage_unit">利用単位:</label>
+                    <input type="text" id="usage_unit" name="usage_unit" placeholder="例: 回, 時間, 本, 曲">
+                </div>
                 <button type="submit">登録</button>
             </form>
         </div>
@@ -269,11 +273,11 @@
                     <div class="subscription-info">
                         <div class="subscription-name">${sub.service_name}</div>
                         <div class="subscription-date">登録日: ${createdDate}</div>
-                        <div class="subscription-usage">今月の利用: ${sub.monthly_usage_count}回</div>
+                        <div class="subscription-usage">今月の利用: ${sub.monthly_usage_count}${sub.usage_unit || '回'}</div>
                     </div>
                     <div class="subscription-price">¥${sub.price.toLocaleString()}</div>
                     {{ if .IsLoggedIn }}
-                        <button type="button" class="usage-btn" onclick="addUsageLog('${sub.id}')">+1</button>
+                        <button type="button" class="usage-btn" onclick="addUsageLog('${sub.id}')">+1${sub.usage_unit || ''}</button>
                         <a href="/subscriptions/edit?id=${sub.id}" class="edit-btn">編集</a>
                         <button type="button" class="delete-btn" onclick="deleteSubscription('${sub.id}')">削除</button>
                     {{ end }}
@@ -295,6 +299,7 @@
             
             const serviceName = document.getElementById('service_name').value;
             const price = parseInt(document.getElementById('price').value);
+            const usageUnit = document.getElementById('usage_unit').value;
             if (!isLoggedIn) {
                 alert('ログインが必要です');
                 window.location.href = '/';
@@ -309,7 +314,8 @@
                     },
                     body: JSON.stringify({
                         service_name: serviceName,
-                        price: price
+                        price: price,
+                        usage_unit: usageUnit
                     })
                 });
                 
