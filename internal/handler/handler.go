@@ -67,6 +67,11 @@ type CreateUsageLogRequest struct {
 	SubscriptionID int `json:"subscription_id"`
 }
 
+type UsageStatResponse struct {
+	Month       string `json:"month"`
+	CostPerUse  int    `json:"cost_per_use"`
+}
+
 var (
 	cognitoClient *cognitoidentityprovider.Client
 )
@@ -568,4 +573,50 @@ func CreateUsageLogHandler(c echo.Context) error {
 
 	// Return the created usage log
 	return c.JSON(http.StatusCreated, usageLog)
+}
+
+func GetUsageStatsHandler(c echo.Context) error {
+	// Get subscription ID from URL parameter
+	subscriptionID := c.Param("id")
+	if subscriptionID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Subscription ID is required")
+	}
+
+	// Validate that subscription ID is a valid number
+	_, err := strconv.Atoi(subscriptionID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid subscription ID")
+	}
+
+	// Get user info from JWT context (set by auth middleware)
+	userContext := c.Get("user")
+	if userContext == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "User not authenticated")
+	}
+	
+	// Extract user ID from JWT claims
+	userID := "unknown_user" // Default fallback
+	if userClaims, ok := userContext.(map[string]interface{}); ok {
+		if sub, exists := userClaims["sub"]; exists {
+			if subStr, ok := sub.(string); ok {
+				userID = subStr
+			}
+		}
+	}
+
+	// Verify user owns this subscription
+	_, err = database.GetSubscriptionByID(subscriptionID, userID)
+	if err != nil {
+		log.Printf("Error fetching subscription for user %s: %v", userID, err)
+		return echo.NewHTTPError(http.StatusNotFound, "Subscription not found")
+	}
+
+	// Return dummy usage statistics data
+	dummyStats := []UsageStatResponse{
+		{Month: "2025-05", CostPerUse: 800},
+		{Month: "2025-06", CostPerUse: 650},
+		{Month: "2025-07", CostPerUse: 750},
+	}
+
+	return c.JSON(http.StatusOK, dummyStats)
 }

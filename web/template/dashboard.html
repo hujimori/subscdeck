@@ -158,7 +158,32 @@
         .usage-btn:hover {
             background-color: #218838;
         }
+        .graph-btn {
+            background-color: #007bff;
+            padding: 8px 12px;
+            font-size: 14px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+        .graph-btn:hover {
+            background-color: #0056b3;
+        }
+        .graph-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        .graph-container canvas {
+            max-width: 100%;
+            height: 400px;
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>SubscDeck</h1>
@@ -196,6 +221,12 @@
                 <span class="total-label">月額合計:</span>
                 <span class="total-amount" id="totalAmount">¥0</span>
             </div>
+        </div>
+        
+        <div id="graphContainer" class="graph-container">
+            <h2 id="graphTitle">利用単価の推移</h2>
+            <canvas id="usageChart"></canvas>
+            <button type="button" onclick="hideGraph()" style="margin-top: 10px;">閉じる</button>
         </div>
     </div>
 
@@ -278,6 +309,7 @@
                     <div class="subscription-price">¥${sub.price.toLocaleString()}</div>
                     {{ if .IsLoggedIn }}
                         <button type="button" class="usage-btn" onclick="addUsageLog('${sub.id}')">+1${sub.usage_unit || ''}</button>
+                        <button type="button" class="graph-btn" onclick="showGraph('${sub.id}', '${sub.service_name}')">グラフ</button>
                         <a href="/subscriptions/edit?id=${sub.id}" class="edit-btn">編集</a>
                         <button type="button" class="delete-btn" onclick="deleteSubscription('${sub.id}')">削除</button>
                     {{ end }}
@@ -427,6 +459,98 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert('ネットワークエラーが発生しました');
+            }
+        }
+
+        // グラフ表示関数
+        let currentChart = null;
+        
+        async function showGraph(subscriptionId, serviceName) {
+            if (!isLoggedIn) {
+                alert('ログインが必要です');
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/subscriptions/${subscriptionId}/usage_stats`);
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('認証エラー: ログインし直してください');
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('データの取得に失敗しました');
+                }
+                
+                const usageStats = await response.json();
+                
+                // グラフタイトルを更新
+                document.getElementById('graphTitle').textContent = `${serviceName} - 利用単価の推移`;
+                
+                // 既存のチャートを破棄
+                if (currentChart) {
+                    currentChart.destroy();
+                }
+                
+                // Chart.jsでグラフを描画
+                const ctx = document.getElementById('usageChart').getContext('2d');
+                currentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: usageStats.map(stat => stat.month),
+                        datasets: [{
+                            label: '利用単価 (円)',
+                            data: usageStats.map(stat => stat.cost_per_use),
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: '月別利用単価'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: '利用単価 (円)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: '月'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // グラフコンテナを表示
+                document.getElementById('graphContainer').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('グラフの表示に失敗しました');
+            }
+        }
+        
+        function hideGraph() {
+            document.getElementById('graphContainer').style.display = 'none';
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
             }
         }
 
