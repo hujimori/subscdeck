@@ -140,6 +140,19 @@
             font-weight: bold;
             color: #dc3545;
         }
+        .usage-btn {
+            background-color: #28a745;
+            padding: 8px 12px;
+            font-size: 14px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+        .usage-btn:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
@@ -254,6 +267,7 @@
                     </div>
                     <div class="subscription-price">¥${sub.price.toLocaleString()}</div>
                     {{ if .IsLoggedIn }}
+                        <button type="button" class="usage-btn" onclick="addUsageLog('${sub.id}')">+1</button>
                         <a href="/subscriptions/edit?id=${sub.id}" class="edit-btn">編集</a>
                         <button type="button" class="delete-btn" onclick="deleteSubscription('${sub.id}')">削除</button>
                     {{ end }}
@@ -321,6 +335,43 @@
                 alert('ネットワークエラーが発生しました');
             }
             });
+        }
+
+        // 利用ログを追加する関数
+        async function addUsageLog(subscriptionId) {
+            if (!isLoggedIn) {
+                alert('ログインが必要です');
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/usage_logs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        subscription_id: parseInt(subscriptionId)
+                    })
+                });
+                
+                if (response.ok) {
+                    const usageLog = await response.json();
+                    // 成功メッセージを表示
+                    const subName = subscriptions.find(sub => sub.id === subscriptionId)?.service_name || 'サブスクリプション';
+                    alert(`${subName}の利用記録を追加しました！`);
+                } else if (response.status === 401) {
+                    alert('認証エラー: ログインし直してください');
+                    window.location.href = '/';
+                } else {
+                    const error = await response.json();
+                    alert('エラー: ' + (error.message || '利用記録の追加に失敗しました'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('ネットワークエラーが発生しました');
+            }
         }
 
         // 削除関数
