@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"subscdeck/internal/database"
@@ -103,6 +104,26 @@ func DashboardHandler(c echo.Context) error {
 	if err != nil {
 		log.Printf("Error fetching subscriptions: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch subscriptions")
+	}
+
+	// Get monthly usage count for each subscription
+	for i := range subscriptions {
+		// Convert subscription ID from string to int
+		subscriptionID, err := strconv.Atoi(subscriptions[i].ID)
+		if err != nil {
+			log.Printf("Error converting subscription ID to int: %v", err)
+			subscriptions[i].MonthlyUsageCount = 0
+			continue
+		}
+		
+		// Get monthly usage count
+		count, err := database.GetMonthlyUsageCount(subscriptionID, userID)
+		if err != nil {
+			log.Printf("Error fetching monthly usage count for subscription %s: %v", subscriptions[i].ID, err)
+			subscriptions[i].MonthlyUsageCount = 0
+		} else {
+			subscriptions[i].MonthlyUsageCount = count
+		}
 	}
 
 	tmpl, err := template.ParseFiles("web/template/dashboard.html")
@@ -251,6 +272,26 @@ func GetSubscriptionsHandler(c echo.Context) error {
 	if err != nil {
 		log.Printf("Error fetching subscriptions: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch subscriptions")
+	}
+
+	// Get monthly usage count for each subscription
+	for i := range subscriptions {
+		// Convert subscription ID from string to int
+		subscriptionID, err := strconv.Atoi(subscriptions[i].ID)
+		if err != nil {
+			log.Printf("Error converting subscription ID to int: %v", err)
+			subscriptions[i].MonthlyUsageCount = 0
+			continue
+		}
+		
+		// Get monthly usage count
+		count, err := database.GetMonthlyUsageCount(subscriptionID, userID)
+		if err != nil {
+			log.Printf("Error fetching monthly usage count for subscription %s: %v", subscriptions[i].ID, err)
+			subscriptions[i].MonthlyUsageCount = 0
+		} else {
+			subscriptions[i].MonthlyUsageCount = count
+		}
 	}
 
 	// Return subscriptions as JSON

@@ -122,6 +122,11 @@
             color: #6c757d;
             font-size: 14px;
         }
+        .subscription-usage {
+            color: #28a745;
+            font-size: 14px;
+            font-weight: bold;
+        }
         .total-section {
             margin-top: 20px;
             padding: 20px;
@@ -264,6 +269,7 @@
                     <div class="subscription-info">
                         <div class="subscription-name">${sub.service_name}</div>
                         <div class="subscription-date">登録日: ${createdDate}</div>
+                        <div class="subscription-usage">今月の利用: ${sub.monthly_usage_count}回</div>
                     </div>
                     <div class="subscription-price">¥${sub.price.toLocaleString()}</div>
                     {{ if .IsLoggedIn }}
@@ -361,6 +367,8 @@
                     // 成功メッセージを表示
                     const subName = subscriptions.find(sub => sub.id === subscriptionId)?.service_name || 'サブスクリプション';
                     alert(`${subName}の利用記録を追加しました！`);
+                    // サブスクリプションリストを再取得して最新の利用回数を表示
+                    fetchSubscriptions();
                 } else if (response.status === 401) {
                     alert('認証エラー: ログインし直してください');
                     window.location.href = '/';

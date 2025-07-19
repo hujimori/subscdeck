@@ -112,12 +112,13 @@ func CreateSubscription(serviceName string, price int, userID string) (*model.Su
 	}
 
 	return &model.Subscription{
-		ID:          strconv.FormatInt(id, 10),
-		ServiceName: serviceName,
-		Price:       price,
-		UsageUnit:   "",
-		UserID:      userID,
-		CreatedAt:   time.Now(),
+		ID:                strconv.FormatInt(id, 10),
+		ServiceName:       serviceName,
+		Price:             price,
+		UsageUnit:         "",
+		UserID:            userID,
+		MonthlyUsageCount: 0, // 新規作成時は0回
+		CreatedAt:         time.Now(),
 	}, nil
 }
 
@@ -171,6 +172,25 @@ func CreateUsageLog(subscriptionID int, userID string) (*model.UsageLog, error) 
 		UserID:         userID,
 		CreatedAt:      time.Now(),
 	}, nil
+}
+
+// GetMonthlyUsageCount retrieves the count of usage logs for a specific subscription in the current month
+func GetMonthlyUsageCount(subscriptionID int, userID string) (int, error) {
+	now := time.Now()
+	firstDayOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	lastDayOfMonth := firstDayOfMonth.AddDate(0, 1, 0).Add(-time.Second)
+
+	var count int
+	err := db.QueryRow(
+		"SELECT COUNT(*) FROM subscription_usage_logs WHERE subscription_id = ? AND user_id = ? AND created_at >= ? AND created_at <= ?",
+		subscriptionID, userID, firstDayOfMonth, lastDayOfMonth,
+	).Scan(&count)
+	
+	if err != nil {
+		return 0, err
+	}
+	
+	return count, nil
 }
 
 // DeleteSubscription removes a subscription from the database for a specific user
