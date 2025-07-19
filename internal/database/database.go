@@ -73,9 +73,9 @@ func GetDB() *sql.DB {
 	return db
 }
 
-// GetAllSubscriptions retrieves all subscriptions from the database
-func GetAllSubscriptions() ([]model.Subscription, error) {
-	rows, err := db.Query("SELECT id, service_name, price, COALESCE(usage_unit, '') as usage_unit, COALESCE(user_id, '') as user_id, created_at FROM subscriptions ORDER BY created_at DESC")
+// GetAllSubscriptions retrieves all subscriptions from the database for a specific user
+func GetAllSubscriptions(userID string) ([]model.Subscription, error) {
+	rows, err := db.Query("SELECT id, service_name, price, COALESCE(usage_unit, '') as usage_unit, COALESCE(user_id, '') as user_id, created_at FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC", userID)
 	if err != nil {
 		return nil, err
 	}
@@ -121,9 +121,9 @@ func CreateSubscription(serviceName string, price int, userID string) (*model.Su
 	}, nil
 }
 
-// GetSubscriptionByID retrieves a single subscription by ID
-func GetSubscriptionByID(id string) (*model.Subscription, error) {
-	row := db.QueryRow("SELECT id, service_name, price, COALESCE(usage_unit, '') as usage_unit, COALESCE(user_id, '') as user_id, created_at FROM subscriptions WHERE id = ?", id)
+// GetSubscriptionByID retrieves a single subscription by ID for a specific user
+func GetSubscriptionByID(id string, userID string) (*model.Subscription, error) {
+	row := db.QueryRow("SELECT id, service_name, price, COALESCE(usage_unit, '') as usage_unit, COALESCE(user_id, '') as user_id, created_at FROM subscriptions WHERE id = ? AND user_id = ?", id, userID)
 	
 	var sub model.Subscription
 	var dbID int
@@ -136,18 +136,18 @@ func GetSubscriptionByID(id string) (*model.Subscription, error) {
 	return &sub, nil
 }
 
-// UpdateSubscription updates a subscription in the database
-func UpdateSubscription(id, serviceName string, price int) (*model.Subscription, error) {
+// UpdateSubscription updates a subscription in the database for a specific user
+func UpdateSubscription(id, serviceName string, price int, userID string) (*model.Subscription, error) {
 	_, err := db.Exec(
-		"UPDATE subscriptions SET service_name = ?, price = ? WHERE id = ?",
-		serviceName, price, id,
+		"UPDATE subscriptions SET service_name = ?, price = ? WHERE id = ? AND user_id = ?",
+		serviceName, price, id, userID,
 	)
 	if err != nil {
 		return nil, err
 	}
 	
 	// Return the updated subscription
-	return GetSubscriptionByID(id)
+	return GetSubscriptionByID(id, userID)
 }
 
 // CreateUsageLog inserts a new usage log into the database

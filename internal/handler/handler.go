@@ -85,8 +85,21 @@ func ProtectedHandler(c echo.Context) error {
 }
 
 func DashboardHandler(c echo.Context) error {
-	// Get all subscriptions from database
-	subscriptions, err := database.GetAllSubscriptions()
+	// Get user info from JWT context (set by auth middleware)
+	userContext := c.Get("user")
+	userID := "unknown_user" // Default fallback
+	if userContext != nil {
+		if userClaims, ok := userContext.(map[string]interface{}); ok {
+			if sub, exists := userClaims["sub"]; exists {
+				if subStr, ok := sub.(string); ok {
+					userID = subStr
+				}
+			}
+		}
+	}
+
+	// Get all subscriptions from database for this user
+	subscriptions, err := database.GetAllSubscriptions(userID)
 	if err != nil {
 		log.Printf("Error fetching subscriptions: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch subscriptions")
@@ -105,7 +118,6 @@ func DashboardHandler(c echo.Context) error {
 	}
 	
 	// Check if user is logged in by checking if user context exists
-	userContext := c.Get("user")
 	isLoggedIn := userContext != nil
 	
 	// Pass subscriptions and login status to template
@@ -218,8 +230,24 @@ func LoginHandler(c echo.Context) error {
 }
 
 func GetSubscriptionsHandler(c echo.Context) error {
-	// Get all subscriptions from database
-	subscriptions, err := database.GetAllSubscriptions()
+	// Get user info from JWT context (set by auth middleware)
+	userContext := c.Get("user")
+	if userContext == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "User not authenticated")
+	}
+	
+	// Extract user ID from JWT claims
+	userID := "unknown_user" // Default fallback
+	if userClaims, ok := userContext.(map[string]interface{}); ok {
+		if sub, exists := userClaims["sub"]; exists {
+			if subStr, ok := sub.(string); ok {
+				userID = subStr
+			}
+		}
+	}
+
+	// Get all subscriptions from database for this user
+	subscriptions, err := database.GetAllSubscriptions(userID)
 	if err != nil {
 		log.Printf("Error fetching subscriptions: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch subscriptions")
@@ -306,15 +334,30 @@ func EditSubscriptionHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "ID is required")
 	}
 
-	// Get subscription from database
-	subscription, err := database.GetSubscriptionByID(req.ID)
+	// Get user info from JWT context (set by auth middleware)
+	userContext := c.Get("user")
+	if userContext == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "User not authenticated")
+	}
+	
+	// Extract user ID from JWT claims
+	userID := "unknown_user" // Default fallback
+	if userClaims, ok := userContext.(map[string]interface{}); ok {
+		if sub, exists := userClaims["sub"]; exists {
+			if subStr, ok := sub.(string); ok {
+				userID = subStr
+			}
+		}
+	}
+
+	// Get subscription from database for this user
+	subscription, err := database.GetSubscriptionByID(req.ID, userID)
 	if err != nil {
 		log.Printf("Error fetching subscription: %v", err)
 		return echo.NewHTTPError(http.StatusNotFound, "Subscription not found")
 	}
 
 	// Check if user is logged in by checking if user context exists
-	userContext := c.Get("user")
 	isLoggedIn := userContext != nil
 	
 	// Load template
@@ -356,8 +399,24 @@ func UpdateSubscriptionHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Price must be greater than 0")
 	}
 
+	// Get user info from JWT context (set by auth middleware)
+	userContext := c.Get("user")
+	if userContext == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "User not authenticated")
+	}
+	
+	// Extract user ID from JWT claims
+	userID := "unknown_user" // Default fallback
+	if userClaims, ok := userContext.(map[string]interface{}); ok {
+		if sub, exists := userClaims["sub"]; exists {
+			if subStr, ok := sub.(string); ok {
+				userID = subStr
+			}
+		}
+	}
+
 	// Update subscription in database
-	updatedSub, err := database.UpdateSubscription(id, req.ServiceName, req.Price)
+	updatedSub, err := database.UpdateSubscription(id, req.ServiceName, req.Price, userID)
 	if err != nil {
 		log.Printf("Error updating subscription: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update subscription")
@@ -385,8 +444,24 @@ func UpdateSubscriptionFormHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Price must be greater than 0")
 	}
 
+	// Get user info from JWT context (set by auth middleware)
+	userContext := c.Get("user")
+	if userContext == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "User not authenticated")
+	}
+	
+	// Extract user ID from JWT claims
+	userID := "unknown_user" // Default fallback
+	if userClaims, ok := userContext.(map[string]interface{}); ok {
+		if sub, exists := userClaims["sub"]; exists {
+			if subStr, ok := sub.(string); ok {
+				userID = subStr
+			}
+		}
+	}
+
 	// Update subscription in database
-	_, err := database.UpdateSubscription(req.ID, req.ServiceName, req.Price)
+	_, err := database.UpdateSubscription(req.ID, req.ServiceName, req.Price, userID)
 	if err != nil {
 		log.Printf("Error updating subscription: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update subscription")
