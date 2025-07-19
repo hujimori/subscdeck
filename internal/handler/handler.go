@@ -59,6 +59,10 @@ type UpdateSubscriptionFormRequest struct {
 	Price       int    `form:"price"`
 }
 
+type CreateUsageLogRequest struct {
+	SubscriptionID int `json:"subscription_id"`
+}
+
 var (
 	cognitoClient *cognitoidentityprovider.Client
 )
@@ -374,4 +378,43 @@ func UpdateSubscriptionFormHandler(c echo.Context) error {
 
 	// Redirect to dashboard
 	return c.Redirect(http.StatusSeeOther, "/dashboard")
+}
+
+func CreateUsageLogHandler(c echo.Context) error {
+	// Parse request body
+	var req CreateUsageLogRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate input
+	if req.SubscriptionID <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "Valid subscription_id is required")
+	}
+
+	// Get user info from JWT context (set by auth middleware)
+	userContext := c.Get("user")
+	if userContext == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "User not authenticated")
+	}
+	
+	// Extract user ID from JWT claims
+	userID := "unknown_user" // Default fallback
+	if userClaims, ok := userContext.(map[string]interface{}); ok {
+		if sub, exists := userClaims["sub"]; exists {
+			if subStr, ok := sub.(string); ok {
+				userID = subStr
+			}
+		}
+	}
+
+	// Create usage log in database
+	usageLog, err := database.CreateUsageLog(req.SubscriptionID, userID)
+	if err != nil {
+		log.Printf("Error creating usage log: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create usage log")
+	}
+
+	// Return the created usage log
+	return c.JSON(http.StatusCreated, usageLog)
 }
