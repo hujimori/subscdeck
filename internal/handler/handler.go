@@ -805,6 +805,9 @@ func VerifyHandler(c echo.Context) error {
 		if strings.Contains(err.Error(), "ExpiredCodeException") {
 			return echo.NewHTTPError(http.StatusBadRequest, "認証コードの有効期限が切れています。下の「認証コードを再送する」ボタンから新しいコードを取得してください。")
 		}
+		if strings.Contains(err.Error(), "AliasExistsException") {
+			return echo.NewHTTPError(http.StatusBadRequest, "このメールアドレスは既に別のアカウントで使用されています。既存のアカウントでログインするか、別のメールアドレスで新規登録してください。")
+		}
 		if strings.Contains(err.Error(), "UserNotFoundException") {
 			return echo.NewHTTPError(http.StatusBadRequest, "ユーザーが見つかりません。ユーザー名を正しく入力しているかご確認ください。")
 		}
