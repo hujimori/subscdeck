@@ -697,17 +697,21 @@ func SignupHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Server configuration error")
 	}
 
+	// Generate a unique username (UUID) since the user pool uses email alias
+	// This prevents the "Username cannot be of email format" error
+	uniqueUsername := fmt.Sprintf("user-%d-%s", time.Now().Unix(), req.Username[:3])
+	
 	// Calculate SECRET_HASH if client secret is configured
 	var secretHash *string
 	if clientSecret != "" {
-		hash := calculateSecretHash(req.Username, clientID, clientSecret)
+		hash := calculateSecretHash(uniqueUsername, clientID, clientSecret)
 		secretHash = aws.String(hash)
 	}
 
 	// Prepare SignUp input
 	signUpInput := &cognitoidentityprovider.SignUpInput{
 		ClientId:   aws.String(clientID),
-		Username:   aws.String(req.Username),
+		Username:   aws.String(uniqueUsername),
 		Password:   aws.String(req.Password),
 		SecretHash: secretHash,
 		UserAttributes: []types.AttributeType{
@@ -719,7 +723,7 @@ func SignupHandler(c echo.Context) error {
 	}
 
 	// Log the request parameters for debugging
-	log.Printf("Attempting signup for user: %s", req.Username)
+	log.Printf("Attempting signup for email: %s with username: %s", req.Username, uniqueUsername)
 	log.Printf("Using User Pool ID: %s", userPoolID)
 	log.Printf("Using Client ID: %s", clientID)
 
