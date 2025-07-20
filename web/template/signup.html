@@ -94,7 +94,8 @@
             メールアドレスとパスワードを入力して、新しいアカウントを作成してください。
         </div>
         <div id="errorMessage" class="error-message"></div>
-        <form id="signupForm" action="/signup" method="POST">
+        <div id="successMessage" class="success-message" style="display: none; background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 4px; margin-bottom: 20px;"></div>
+        <form id="signupForm">
             <div class="form-group">
                 <label for="username">メールアドレス:</label>
                 <input type="email" id="username" name="username" required placeholder="example@example.com">
@@ -109,5 +110,66 @@
             すでにアカウントをお持ちの方は<a href="/">こちらからログイン</a>
         </div>
     </div>
+
+    <script>
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            
+            // Hide previous messages
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            
+            // Disable button during request
+            submitBtn.disabled = true;
+            submitBtn.textContent = '作成中...';
+            
+            try {
+                const response = await fetch('/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Success
+                    successMessage.textContent = data.message || 'アカウントが作成されました。確認メールをご確認ください。';
+                    successMessage.style.display = 'block';
+                    
+                    // Clear form
+                    document.getElementById('signupForm').reset();
+                    
+                    // Redirect to login page after a delay
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 3000);
+                } else {
+                    // Error
+                    errorMessage.textContent = data.message || 'アカウント作成に失敗しました。';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorMessage.textContent = 'ネットワークエラーが発生しました。';
+                errorMessage.style.display = 'block';
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'アカウント作成';
+            }
+        });
+    </script>
 </body>
 </html>

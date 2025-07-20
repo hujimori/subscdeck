@@ -29,6 +29,11 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
+type SignupRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	IDToken      string `json:"id_token"`
@@ -669,4 +674,81 @@ func SignupPageHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load template")
 	}
 	return tmpl.Execute(c.Response(), nil)
+}
+
+func SignupHandler(c echo.Context) error {
+	// Parse request body
+	var req SignupRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate input
+	if req.Username == "" || req.Password == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Username and password are required")
+	}
+
+	// Get environment variables
+	userPoolID := os.Getenv("COGNITO_USER_POOL_ID")
+	clientID := os.Getenv("COGNITO_APP_CLIENT_ID")
+	clientSecret := os.Getenv("COGNITO_APP_CLIENT_SECRET")
+	
+	if userPoolID == "" || clientID == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Server configuration error")
+	}
+
+	// Calculate SECRET_HASH if client secret is configured
+	var secretHash *string
+	if clientSecret != "" {
+		hash := calculateSecretHash(req.Username, clientID, clientSecret)
+		secretHash = aws.String(hash)
+	}
+
+	// Prepare SignUp input
+	signUpInput := &cognitoidentityprovider.SignUpInput{
+		ClientId:   aws.String(clientID),
+		Username:   aws.String(req.Username),
+		Password:   aws.String(req.Password),
+		SecretHash: secretHash,
+		UserAttributes: []types.AttributeType{
+			{
+				Name:  aws.String("email"),
+				Value: aws.String(req.Username),
+			},
+		},
+	}
+
+	// Log the request parameters for debugging
+	log.Printf("Attempting signup for user: %s", req.Username)
+	log.Printf("Using User Pool ID: %s", userPoolID)
+	log.Printf("Using Client ID: %s", clientID)
+
+	// Call Cognito SignUp
+	result, err := cognitoClient.SignUp(c.Request().Context(), signUpInput)
+	if err != nil {
+		// Log the error for debugging
+		log.Printf("Cognito SignUp error: %v", err)
+		
+		// Check for specific error types
+		if strings.Contains(err.Error(), "UsernameExistsException") {
+			return echo.NewHTTPError(http.StatusBadRequest, "このメールアドレスは既に登録されています")
+		}
+		if strings.Contains(err.Error(), "InvalidPasswordException") {
+			return echo.NewHTTPError(http.StatusBadRequest, "パスワードは8文字以上で、大文字・小文字・数字を含む必要があります")
+		}
+		if strings.Contains(err.Error(), "InvalidParameterException") {
+			return echo.NewHTTPError(http.StatusBadRequest, "入力内容に誤りがあります")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("アカウント作成に失敗しました: %v", err))
+	}
+
+	// Log successful signup
+	log.Printf("User signup successful for: %s, UserConfirmed: %v", req.Username, result.UserConfirmed)
+
+	// Return success response with confirmation status
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "アカウントが作成されました。確認メールをご確認ください。",
+		"userSub": aws.ToString(result.UserSub),
+		"userConfirmed": result.UserConfirmed,
+	})
 }
