@@ -102,15 +102,15 @@
         <h2 style="text-align: center; margin-bottom: 30px;">メール認証</h2>
         <div class="info-message">
             登録されたメールアドレスに認証コードを送信しました。<br>
-            受信した6桁のコードを入力してください。
+            ユーザー名と受信した6桁のコードを入力してください。
         </div>
         <div id="errorMessage" class="error-message"></div>
         <div id="successMessage" class="success-message"></div>
         
         <form id="verifyForm">
             <div class="form-group">
-                <label for="username">メールアドレス:</label>
-                <input type="email" id="username" name="username" required placeholder="example@example.com">
+                <label for="username">ユーザー名:</label>
+                <input type="text" id="username" name="username" required placeholder="your_username">
             </div>
             <div class="form-group">
                 <label for="code">認証コード:</label>

@@ -91,14 +91,18 @@
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 30px;">アカウント作成</h2>
         <div class="info-message">
-            メールアドレスとパスワードを入力して、新しいアカウントを作成してください。
+            ユーザー名、メールアドレス、パスワードを入力して、新しいアカウントを作成してください。
         </div>
         <div id="errorMessage" class="error-message"></div>
         <div id="successMessage" class="success-message" style="display: none; background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 4px; margin-bottom: 20px;"></div>
         <form id="signupForm">
             <div class="form-group">
-                <label for="username">メールアドレス:</label>
-                <input type="email" id="username" name="username" required placeholder="example@example.com">
+                <label for="username">ユーザー名:</label>
+                <input type="text" id="username" name="username" required placeholder="example_user" pattern="[a-zA-Z0-9_]{3,20}" title="3-20文字の英数字とアンダースコアのみ">
+            </div>
+            <div class="form-group">
+                <label for="email">メールアドレス:</label>
+                <input type="email" id="email" name="email" required placeholder="example@example.com">
             </div>
             <div class="form-group">
                 <label for="password">パスワード:</label>
@@ -116,6 +120,7 @@
             e.preventDefault();
             
             const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const submitBtn = e.target.querySelector('button[type="submit"]');
             const errorMessage = document.getElementById('errorMessage');
@@ -137,6 +142,7 @@
                     },
                     body: JSON.stringify({
                         username: username,
+                        email: email,
                         password: password
                     })
                 });

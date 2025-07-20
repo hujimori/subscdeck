@@ -31,6 +31,7 @@ type LoginRequest struct {
 
 type SignupRequest struct {
 	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -231,15 +232,18 @@ func LoginHandler(c echo.Context) error {
 		log.Printf("Cognito InitiateAuth error: %v", err)
 		log.Printf("Error type: %T", err)
 		
-		// Check if it's an authentication error
+		// Check for specific error types with improved UX messaging
 		if strings.Contains(err.Error(), "NotAuthorizedException") {
-			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid username or password")
+			return echo.NewHTTPError(http.StatusUnauthorized, "ユーザー名またはパスワードが正しくありません。入力内容をご確認ください。")
 		}
 		if strings.Contains(err.Error(), "UserNotFoundException") {
-			return echo.NewHTTPError(http.StatusUnauthorized, "User not found")
+			return echo.NewHTTPError(http.StatusUnauthorized, "ユーザーが見つかりません。ユーザー名またはメールアドレスをご確認いただくか、アカウント作成ページから新規登録してください。")
+		}
+		if strings.Contains(err.Error(), "UserNotConfirmedException") {
+			return echo.NewHTTPError(http.StatusUnauthorized, "アカウントの確認が完了していません。メールで送信された認証コードを入力して、アカウントを有効化してください。")
 		}
 		if strings.Contains(err.Error(), "InvalidParameterException") {
-			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request parameters")
+			return echo.NewHTTPError(http.StatusBadRequest, "入力内容に誤りがあります。ユーザー名またはメールアドレスとパスワードを正しく入力してください。")
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Authentication failed: %v", err))
 	}
@@ -701,8 +705,8 @@ func SignupHandler(c echo.Context) error {
 	}
 
 	// Validate input
-	if req.Username == "" || req.Password == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Username and password are required")
+	if req.Username == "" || req.Email == "" || req.Password == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "ユーザー名、メールアドレス、パスワードは全て必須です")
 	}
 
 	// Get environment variables
@@ -714,33 +718,30 @@ func SignupHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Server configuration error")
 	}
 
-	// Generate a unique username (UUID) since the user pool uses email alias
-	// This prevents the "Username cannot be of email format" error
-	uniqueUsername := fmt.Sprintf("user-%d-%s", time.Now().Unix(), req.Username[:3])
-	
+	// Use the provided username directly
 	// Calculate SECRET_HASH if client secret is configured
 	var secretHash *string
 	if clientSecret != "" {
-		hash := calculateSecretHash(uniqueUsername, clientID, clientSecret)
+		hash := calculateSecretHash(req.Username, clientID, clientSecret)
 		secretHash = aws.String(hash)
 	}
 
 	// Prepare SignUp input
 	signUpInput := &cognitoidentityprovider.SignUpInput{
 		ClientId:   aws.String(clientID),
-		Username:   aws.String(uniqueUsername),
+		Username:   aws.String(req.Username),
 		Password:   aws.String(req.Password),
 		SecretHash: secretHash,
 		UserAttributes: []types.AttributeType{
 			{
 				Name:  aws.String("email"),
-				Value: aws.String(req.Username),
+				Value: aws.String(req.Email),
 			},
 		},
 	}
 
 	// Log the request parameters for debugging
-	log.Printf("Attempting signup for email: %s with username: %s", req.Username, uniqueUsername)
+	log.Printf("Attempting signup for email: %s with username: %s", req.Email, req.Username)
 	log.Printf("Using User Pool ID: %s", userPoolID)
 	log.Printf("Using Client ID: %s", clientID)
 
@@ -750,15 +751,18 @@ func SignupHandler(c echo.Context) error {
 		// Log the error for debugging
 		log.Printf("Cognito SignUp error: %v", err)
 		
-		// Check for specific error types
+		// Check for specific error types with improved UX messaging
 		if strings.Contains(err.Error(), "UsernameExistsException") {
-			return echo.NewHTTPError(http.StatusBadRequest, "このメールアドレスは既に登録されています")
+			return echo.NewHTTPError(http.StatusBadRequest, "このユーザー名は既に使用されています。別のユーザー名を選択してください。")
+		}
+		if strings.Contains(err.Error(), "AliasExistsException") {
+			return echo.NewHTTPError(http.StatusBadRequest, "このメールアドレスは既に登録されています。ログインページから既存のアカウントでログインするか、別のメールアドレスをお試しください。")
 		}
 		if strings.Contains(err.Error(), "InvalidPasswordException") {
-			return echo.NewHTTPError(http.StatusBadRequest, "パスワードは8文字以上で、大文字・小文字・数字を含む必要があります")
+			return echo.NewHTTPError(http.StatusBadRequest, "パスワードが要件を満たしていません。8文字以上で大文字・小文字・数字を含むパスワードを設定してください。")
 		}
 		if strings.Contains(err.Error(), "InvalidParameterException") {
-			return echo.NewHTTPError(http.StatusBadRequest, "入力内容に誤りがあります")
+			return echo.NewHTTPError(http.StatusBadRequest, "入力内容に誤りがあります。ユーザー名は3-20文字の英数字とアンダースコアのみ使用できます。")
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("アカウント作成に失敗しました: %v", err))
 	}
@@ -823,15 +827,15 @@ func VerifyHandler(c echo.Context) error {
 		// Log the error for debugging
 		log.Printf("Cognito ConfirmSignUp error: %v", err)
 		
-		// Check for specific error types
+		// Check for specific error types with improved UX messaging
 		if strings.Contains(err.Error(), "CodeMismatchException") {
-			return echo.NewHTTPError(http.StatusBadRequest, "認証コードが正しくありません")
+			return echo.NewHTTPError(http.StatusBadRequest, "認証コードが正しくありません。入力したコードをご確認いただくか、新しいコードを再送してください。")
 		}
 		if strings.Contains(err.Error(), "ExpiredCodeException") {
-			return echo.NewHTTPError(http.StatusBadRequest, "認証コードの有効期限が切れています")
+			return echo.NewHTTPError(http.StatusBadRequest, "認証コードの有効期限が切れています。下の「認証コードを再送する」ボタンから新しいコードを取得してください。")
 		}
 		if strings.Contains(err.Error(), "UserNotFoundException") {
-			return echo.NewHTTPError(http.StatusBadRequest, "ユーザーが見つかりません")
+			return echo.NewHTTPError(http.StatusBadRequest, "ユーザーが見つかりません。ユーザー名を正しく入力しているかご確認ください。")
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("認証に失敗しました: %v", err))
 	}
@@ -888,12 +892,12 @@ func ResendCodeHandler(c echo.Context) error {
 		// Log the error for debugging
 		log.Printf("Cognito ResendConfirmationCode error: %v", err)
 		
-		// Check for specific error types
+		// Check for specific error types with improved UX messaging
 		if strings.Contains(err.Error(), "UserNotFoundException") {
-			return echo.NewHTTPError(http.StatusBadRequest, "ユーザーが見つかりません")
+			return echo.NewHTTPError(http.StatusBadRequest, "そのユーザー名は存在しません。ユーザー名を正しく入力しているかご確認ください。")
 		}
 		if strings.Contains(err.Error(), "InvalidParameterException") {
-			return echo.NewHTTPError(http.StatusBadRequest, "無効なパラメータです")
+			return echo.NewHTTPError(http.StatusBadRequest, "入力内容に誤りがあります。ユーザー名を正しく入力してください。")
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("コードの再送に失敗しました: %v", err))
 	}
