@@ -70,6 +70,7 @@ func main() {
 	e.POST("/api/usage_logs", handler.CreateUsageLogHandler, middleware.CognitoAuthMiddleware())
 	e.GET("/api/subscriptions/:id/usage_stats", handler.GetUsageStatsHandler, middleware.CognitoAuthMiddleware())
 	e.POST("/logout", handler.LogoutHandler)
+	e.GET("/signup", handler.SignupPageHandler)
 
 	// Start server
 	port := os.Getenv("PORT")

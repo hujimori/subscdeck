@@ -662,3 +662,11 @@ func LogoutHandler(c echo.Context) error {
 	// Redirect to login page
 	return c.Redirect(http.StatusSeeOther, "/")
 }
+
+func SignupPageHandler(c echo.Context) error {
+	tmpl, err := template.ParseFiles("web/template/signup.html")
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load template")
+	}
+	return tmpl.Execute(c.Response(), nil)
+}
