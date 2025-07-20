@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"subscdeck/internal/database"
 	"subscdeck/internal/model"
@@ -583,7 +584,7 @@ func GetUsageStatsHandler(c echo.Context) error {
 	}
 
 	// Validate that subscription ID is a valid number
-	_, err := strconv.Atoi(subscriptionID)
+	subscriptionIDInt, err := strconv.Atoi(subscriptionID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid subscription ID")
 	}
@@ -604,19 +605,43 @@ func GetUsageStatsHandler(c echo.Context) error {
 		}
 	}
 
-	// Verify user owns this subscription
-	_, err = database.GetSubscriptionByID(subscriptionID, userID)
+	// Get subscription information from database
+	subscription, err := database.GetSubscriptionByID(subscriptionID, userID)
 	if err != nil {
 		log.Printf("Error fetching subscription for user %s: %v", userID, err)
 		return echo.NewHTTPError(http.StatusNotFound, "Subscription not found")
 	}
 
-	// Return dummy usage statistics data
-	dummyStats := []UsageStatResponse{
-		{Month: "2025-05", CostPerUse: 800},
-		{Month: "2025-06", CostPerUse: 650},
-		{Month: "2025-07", CostPerUse: 750},
+	// Calculate usage statistics for the last 3 months
+	var usageStats []UsageStatResponse
+	now := time.Now()
+	
+	for i := 2; i >= 0; i-- {
+		targetDate := now.AddDate(0, -i, 0)
+		year := targetDate.Year()
+		month := int(targetDate.Month())
+		
+		// Get usage count for this month
+		usageCount, err := database.GetMonthlyUsageCountByMonth(subscriptionIDInt, userID, year, month)
+		if err != nil {
+			log.Printf("Error fetching monthly usage count for subscription %s, year %d, month %d: %v", subscriptionID, year, month, err)
+			continue
+		}
+		
+		// Calculate cost per use
+		var costPerUse int
+		if usageCount > 0 {
+			costPerUse = subscription.Price / usageCount
+		} else {
+			costPerUse = subscription.Price // If no usage, cost per use equals full price
+		}
+		
+		monthStr := fmt.Sprintf("%04d-%02d", year, month)
+		usageStats = append(usageStats, UsageStatResponse{
+			Month:      monthStr,
+			CostPerUse: costPerUse,
+		})
 	}
 
-	return c.JSON(http.StatusOK, dummyStats)
+	return c.JSON(http.StatusOK, usageStats)
 }
