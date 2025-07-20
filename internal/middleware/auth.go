@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"net/http"
 	"os"
@@ -79,6 +80,12 @@ func CognitoAuthMiddleware() echo.MiddlewareFunc {
 
 			// Store claims in context
 			c.Set("user", token.Claims)
+			
+			// Debug log to check claims
+			if cognitoClaims, ok := token.Claims.(*CognitoJWTClaims); ok {
+				log.Printf("CognitoAuthMiddleware: Token claims - Subject: %s, ClientID: %s, TokenUse: %s", 
+					cognitoClaims.Subject, cognitoClaims.ClientID, cognitoClaims.TokenUse)
+			}
 
 			return next(c)
 		}

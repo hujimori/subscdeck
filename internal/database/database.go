@@ -75,8 +75,25 @@ func GetDB() *sql.DB {
 
 // GetAllSubscriptions retrieves all subscriptions from the database for a specific user
 func GetAllSubscriptions(userID string) ([]model.Subscription, error) {
+	// Debug log to check database query
+	log.Printf("GetAllSubscriptions: Querying for userID: %s", userID)
+	
+	// First, let's see all subscriptions in the database for debugging
+	debugRows, debugErr := db.Query("SELECT id, service_name, COALESCE(user_id, '') as user_id FROM subscriptions ORDER BY created_at DESC")
+	if debugErr == nil {
+		log.Printf("GetAllSubscriptions: DEBUG - All subscriptions in database:")
+		for debugRows.Next() {
+			var debugId int
+			var debugService, debugUserID string
+			debugRows.Scan(&debugId, &debugService, &debugUserID)
+			log.Printf("GetAllSubscriptions: DEBUG - ID: %d, Service: %s, UserID: '%s'", debugId, debugService, debugUserID)
+		}
+		debugRows.Close()
+	}
+	
 	rows, err := db.Query("SELECT id, service_name, price, COALESCE(usage_unit, '') as usage_unit, COALESCE(user_id, '') as user_id, created_at FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC", userID)
 	if err != nil {
+		log.Printf("GetAllSubscriptions: Database query error: %v", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -87,12 +104,15 @@ func GetAllSubscriptions(userID string) ([]model.Subscription, error) {
 		var id int
 		err := rows.Scan(&id, &sub.ServiceName, &sub.Price, &sub.UsageUnit, &sub.UserID, &sub.CreatedAt)
 		if err != nil {
+			log.Printf("GetAllSubscriptions: Row scan error: %v", err)
 			return nil, err
 		}
 		sub.ID = strconv.Itoa(id)
 		subscriptions = append(subscriptions, sub)
+		log.Printf("GetAllSubscriptions: Found subscription ID %d for userID %s, service: %s", id, sub.UserID, sub.ServiceName)
 	}
-
+	
+	log.Printf("GetAllSubscriptions: Found %d subscriptions for userID: %s", len(subscriptions), userID)
 	return subscriptions, rows.Err()
 }
 

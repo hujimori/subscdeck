@@ -122,6 +122,9 @@ func DashboardHandler(c echo.Context) error {
 			}
 		}
 	}
+	
+	// Debug log to check user ID extraction
+	log.Printf("DashboardHandler: UserID extracted from JWT: %s", userID)
 
 	// Get all subscriptions from database for this user
 	subscriptions, err := database.GetAllSubscriptions(userID)
@@ -293,6 +296,9 @@ func GetSubscriptionsHandler(c echo.Context) error {
 			}
 		}
 	}
+	
+	// Debug log to check user ID extraction
+	log.Printf("GetSubscriptionsHandler: UserID extracted from JWT: %s", userID)
 
 	// Get all subscriptions from database for this user
 	subscriptions, err := database.GetAllSubscriptions(userID)
