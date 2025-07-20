@@ -145,16 +145,16 @@
                 
                 if (response.ok) {
                     // Success
-                    successMessage.textContent = data.message || 'アカウントが作成されました。確認メールをご確認ください。';
+                    successMessage.textContent = data.message || 'アカウントが作成されました。認証コード入力ページに移動します。';
                     successMessage.style.display = 'block';
                     
                     // Clear form
                     document.getElementById('signupForm').reset();
                     
-                    // Redirect to login page after a delay
+                    // Redirect to verify page
                     setTimeout(() => {
-                        window.location.href = '/';
-                    }, 3000);
+                        window.location.href = data.redirect || '/verify';
+                    }, 2000);
                 } else {
                     // Error
                     errorMessage.textContent = data.message || 'アカウント作成に失敗しました。';

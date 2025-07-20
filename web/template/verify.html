@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メール認証 - SubscDeck</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input[type="email"], input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .resend-btn {
+            background-color: #6c757d;
+        }
+        .resend-btn:hover {
+            background-color: #545b62;
+        }
+        .info-message {
+            background-color: #cce5ff;
+            border: 1px solid #b8daff;
+            color: #004085;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .error-message {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .success-message {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .separator {
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>SubscDeck</h1>
+    <div class="container">
+        <h2 style="text-align: center; margin-bottom: 30px;">メール認証</h2>
+        <div class="info-message">
+            登録されたメールアドレスに認証コードを送信しました。<br>
+            受信した6桁のコードを入力してください。
+        </div>
+        <div id="errorMessage" class="error-message"></div>
+        <div id="successMessage" class="success-message"></div>
+        
+        <form id="verifyForm">
+            <div class="form-group">
+                <label for="username">メールアドレス:</label>
+                <input type="email" id="username" name="username" required placeholder="example@example.com">
+            </div>
+            <div class="form-group">
+                <label for="code">認証コード:</label>
+                <input type="text" id="code" name="code" required placeholder="123456" maxlength="6" pattern="[0-9]{6}">
+            </div>
+            <button type="submit">認証する</button>
+        </form>
+        
+        <div class="separator">または</div>
+        
+        <form id="resendForm">
+            <input type="hidden" id="resendUsername" name="username">
+            <button type="submit" class="resend-btn">認証コードを再送する</button>
+        </form>
+    </div>
+
+    <script>
+        // Handle verify form submission
+        document.getElementById('verifyForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const code = document.getElementById('code').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            
+            // Hide previous messages
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            
+            // Disable button during request
+            submitBtn.disabled = true;
+            submitBtn.textContent = '認証中...';
+            
+            try {
+                const response = await fetch('/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        code: code
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Success
+                    successMessage.textContent = data.message || '認証が完了しました。ログインページに移動します...';
+                    successMessage.style.display = 'block';
+                    
+                    // Redirect to login page after a delay
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    // Error
+                    errorMessage.textContent = data.message || '認証に失敗しました。';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorMessage.textContent = 'ネットワークエラーが発生しました。';
+                errorMessage.style.display = 'block';
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = '認証する';
+            }
+        });
+
+        // Handle resend form submission
+        document.getElementById('resendForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            if (!username) {
+                alert('メールアドレスを入力してください。');
+                return;
+            }
+            
+            // Set username in hidden field
+            document.getElementById('resendUsername').value = username;
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            
+            // Hide previous messages
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            
+            // Disable button during request
+            submitBtn.disabled = true;
+            submitBtn.textContent = '送信中...';
+            
+            try {
+                const response = await fetch('/resend-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Success
+                    successMessage.textContent = data.message || '新しい認証コードを送信しました。';
+                    successMessage.style.display = 'block';
+                } else {
+                    // Error
+                    errorMessage.textContent = data.message || 'コードの再送に失敗しました。';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorMessage.textContent = 'ネットワークエラーが発生しました。';
+                errorMessage.style.display = 'block';
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = '認証コードを再送する';
+            }
+        });
+    </script>
+</body>
+</html>

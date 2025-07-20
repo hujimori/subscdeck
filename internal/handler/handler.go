@@ -676,6 +676,14 @@ func SignupPageHandler(c echo.Context) error {
 	return tmpl.Execute(c.Response(), nil)
 }
 
+func VerifyPageHandler(c echo.Context) error {
+	tmpl, err := template.ParseFiles("web/template/verify.html")
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load template")
+	}
+	return tmpl.Execute(c.Response(), nil)
+}
+
 func SignupHandler(c echo.Context) error {
 	// Parse request body
 	var req SignupRequest
@@ -749,10 +757,11 @@ func SignupHandler(c echo.Context) error {
 	// Log successful signup
 	log.Printf("User signup successful for: %s, UserConfirmed: %v", req.Username, result.UserConfirmed)
 
-	// Return success response with confirmation status
+	// Return redirect to verify page
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message": "アカウントが作成されました。確認メールをご確認ください。",
+		"message": "アカウントが作成されました。認証コード入力ページに移動します。",
 		"userSub": aws.ToString(result.UserSub),
 		"userConfirmed": result.UserConfirmed,
+		"redirect": "/verify",
 	})
 }
