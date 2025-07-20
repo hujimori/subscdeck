@@ -711,6 +711,36 @@ func SignupHandler(c echo.Context) error {
 		},
 	}
 
+	// 事前チェック：メールアドレスが既に使用されていないか確認
+	// ListUsers APIを使用してメールアドレスの重複をチェック
+	listUsersInput := &cognitoidentityprovider.ListUsersInput{
+		UserPoolId: aws.String(userPoolID),
+		Filter:     aws.String(fmt.Sprintf("email = \"%s\"", req.Email)),
+		Limit:      aws.Int32(1), // 1件でも見つかれば重複と判断
+	}
+
+	log.Printf("Checking if email %s already exists in user pool", req.Email)
+	listResult, err := cognitoClient.ListUsers(c.Request().Context(), listUsersInput)
+	if err != nil {
+		log.Printf("Error checking for existing email: %v", err)
+		// ListUsers APIの権限エラーの場合でも、ユーザーに分かりやすいメッセージを返す
+		if strings.Contains(err.Error(), "UnrecognizedClientException") || strings.Contains(err.Error(), "AccessDeniedException") {
+			log.Printf("ListUsers API permission error. Application needs appropriate IAM permissions to use ListUsers API.")
+			// 権限エラーの場合は処理を続行せず、設定エラーとして返す
+			return echo.NewHTTPError(http.StatusInternalServerError, "サーバー設定エラー：メールアドレスの重複チェックができません。管理者に連絡してください。")
+		}
+		// その他のエラーの場合も安全のため処理を中断
+		return echo.NewHTTPError(http.StatusInternalServerError, "メールアドレスの確認中にエラーが発生しました。")
+	}
+
+	// ユーザーが見つかった場合（メールアドレスが既に使用されている）
+	if listResult != nil && len(listResult.Users) > 0 {
+		log.Printf("Email %s already exists in user pool", req.Email)
+		return echo.NewHTTPError(http.StatusBadRequest, "このメールアドレスは既に登録されています。ログインページから既存のアカウントでログインするか、別のメールアドレスをお試しください。")
+	}
+
+	log.Printf("Email %s is available, proceeding with signup", req.Email)
+
 	// Log the request parameters for debugging
 	log.Printf("Attempting signup for email: %s with username: %s", req.Email, req.Username)
 	log.Printf("Using User Pool ID: %s", userPoolID)
@@ -742,7 +772,7 @@ func SignupHandler(c echo.Context) error {
 	log.Printf("User signup successful for: %s, UserConfirmed: %v", req.Username, result.UserConfirmed)
 
 	// Return redirect to verify page
-	return c.JSON(http.StatusOK, map[string]interface{}{
+	return c.JSON(http.StatusOK, map[string]any{
 		"message": "アカウントが作成されました。認証コード入力ページに移動します。",
 		"userSub": aws.ToString(result.UserSub),
 		"userConfirmed": result.UserConfirmed,
@@ -818,7 +848,7 @@ func VerifyHandler(c echo.Context) error {
 	log.Printf("User verification successful for: %s", req.Username)
 
 	// Return success response
-	return c.JSON(http.StatusOK, map[string]interface{}{
+	return c.JSON(http.StatusOK, map[string]any{
 		"message": "認証が完了しました。ログインページに移動します。",
 	})
 }
@@ -880,7 +910,7 @@ func ResendCodeHandler(c echo.Context) error {
 	log.Printf("Confirmation code resent successfully for user: %s", req.Username)
 
 	// Return success response
-	return c.JSON(http.StatusOK, map[string]interface{}{
+	return c.JSON(http.StatusOK, map[string]any{
 		"message": "新しい認証コードを送信しました。",
 	})
 }
