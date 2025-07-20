@@ -645,3 +645,20 @@ func GetUsageStatsHandler(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, usageStats)
 }
+
+func LogoutHandler(c echo.Context) error {
+	// Create a cookie with the same name but with an expired date to delete it
+	cookie := &http.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		Path:     "/",
+		MaxAge:   -1, // Negative MaxAge means delete the cookie
+		Expires:  time.Now().Add(-time.Hour), // Set expiration to the past
+	}
+	c.SetCookie(cookie)
+
+	// Redirect to login page
+	return c.Redirect(http.StatusSeeOther, "/")
+}

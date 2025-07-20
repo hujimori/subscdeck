@@ -182,12 +182,38 @@
             max-width: 100%;
             height: 400px;
         }
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+        .logout-btn {
+            background-color: #6c757d;
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .logout-btn:hover {
+            background-color: #545b62;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <h1>SubscDeck</h1>
     <div class="container">
+        <div class="header-container">
+            <h1>SubscDeck</h1>
+            {{ if .IsLoggedIn }}
+            <form id="logoutForm" action="/logout" method="POST" style="margin: 0;">
+                <button type="submit" class="logout-btn">ログアウト</button>
+            </form>
+            {{ end }}
+        </div>
         {{ if .IsLoggedIn }}
         <div class="form-section">
             <h2>新規サブスクリプション登録</h2>
