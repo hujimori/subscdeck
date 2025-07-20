@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"subscdeck/internal/database"
+	"subscdeck/internal/middleware"
 	"subscdeck/internal/model"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -114,12 +115,8 @@ func DashboardHandler(c echo.Context) error {
 	userContext := c.Get("user")
 	userID := "unknown_user" // Default fallback
 	if userContext != nil {
-		if userClaims, ok := userContext.(map[string]interface{}); ok {
-			if sub, exists := userClaims["sub"]; exists {
-				if subStr, ok := sub.(string); ok {
-					userID = subStr
-				}
-			}
+		if userClaims, ok := userContext.(*middleware.CognitoJWTClaims); ok {
+			userID = userClaims.Subject
 		}
 	}
 	
@@ -289,12 +286,8 @@ func GetSubscriptionsHandler(c echo.Context) error {
 	
 	// Extract user ID from JWT claims
 	userID := "unknown_user" // Default fallback
-	if userClaims, ok := userContext.(map[string]interface{}); ok {
-		if sub, exists := userClaims["sub"]; exists {
-			if subStr, ok := sub.(string); ok {
-				userID = subStr
-			}
-		}
+	if userClaims, ok := userContext.(*middleware.CognitoJWTClaims); ok {
+		userID = userClaims.Subject
 	}
 	
 	// Debug log to check user ID extraction
@@ -354,12 +347,8 @@ func CreateSubscriptionHandler(c echo.Context) error {
 	
 	// Extract user ID from JWT claims
 	userID := "unknown_user" // Default fallback
-	if userClaims, ok := userContext.(map[string]interface{}); ok {
-		if sub, exists := userClaims["sub"]; exists {
-			if subStr, ok := sub.(string); ok {
-				userID = subStr
-			}
-		}
+	if userClaims, ok := userContext.(*middleware.CognitoJWTClaims); ok {
+		userID = userClaims.Subject
 	}
 
 	// Create new subscription in database
@@ -393,12 +382,8 @@ func DeleteSubscriptionHandler(c echo.Context) error {
 	
 	// Extract user ID from JWT claims
 	userID := "unknown_user" // Default fallback
-	if userClaims, ok := userContext.(map[string]interface{}); ok {
-		if sub, exists := userClaims["sub"]; exists {
-			if subStr, ok := sub.(string); ok {
-				userID = subStr
-			}
-		}
+	if userClaims, ok := userContext.(*middleware.CognitoJWTClaims); ok {
+		userID = userClaims.Subject
 	}
 
 	// Delete from database (only user's own subscription)
@@ -432,12 +417,8 @@ func EditSubscriptionHandler(c echo.Context) error {
 	
 	// Extract user ID from JWT claims
 	userID := "unknown_user" // Default fallback
-	if userClaims, ok := userContext.(map[string]interface{}); ok {
-		if sub, exists := userClaims["sub"]; exists {
-			if subStr, ok := sub.(string); ok {
-				userID = subStr
-			}
-		}
+	if userClaims, ok := userContext.(*middleware.CognitoJWTClaims); ok {
+		userID = userClaims.Subject
 	}
 
 	// Get subscription from database for this user
@@ -497,12 +478,8 @@ func UpdateSubscriptionHandler(c echo.Context) error {
 	
 	// Extract user ID from JWT claims
 	userID := "unknown_user" // Default fallback
-	if userClaims, ok := userContext.(map[string]interface{}); ok {
-		if sub, exists := userClaims["sub"]; exists {
-			if subStr, ok := sub.(string); ok {
-				userID = subStr
-			}
-		}
+	if userClaims, ok := userContext.(*middleware.CognitoJWTClaims); ok {
+		userID = userClaims.Subject
 	}
 
 	// Update subscription in database
@@ -542,12 +519,8 @@ func UpdateSubscriptionFormHandler(c echo.Context) error {
 	
 	// Extract user ID from JWT claims
 	userID := "unknown_user" // Default fallback
-	if userClaims, ok := userContext.(map[string]interface{}); ok {
-		if sub, exists := userClaims["sub"]; exists {
-			if subStr, ok := sub.(string); ok {
-				userID = subStr
-			}
-		}
+	if userClaims, ok := userContext.(*middleware.CognitoJWTClaims); ok {
+		userID = userClaims.Subject
 	}
 
 	// Update subscription in database
@@ -581,12 +554,8 @@ func CreateUsageLogHandler(c echo.Context) error {
 	
 	// Extract user ID from JWT claims
 	userID := "unknown_user" // Default fallback
-	if userClaims, ok := userContext.(map[string]interface{}); ok {
-		if sub, exists := userClaims["sub"]; exists {
-			if subStr, ok := sub.(string); ok {
-				userID = subStr
-			}
-		}
+	if userClaims, ok := userContext.(*middleware.CognitoJWTClaims); ok {
+		userID = userClaims.Subject
 	}
 
 	// Create usage log in database
@@ -621,12 +590,8 @@ func GetUsageStatsHandler(c echo.Context) error {
 	
 	// Extract user ID from JWT claims
 	userID := "unknown_user" // Default fallback
-	if userClaims, ok := userContext.(map[string]interface{}); ok {
-		if sub, exists := userClaims["sub"]; exists {
-			if subStr, ok := sub.(string); ok {
-				userID = subStr
-			}
-		}
+	if userClaims, ok := userContext.(*middleware.CognitoJWTClaims); ok {
+		userID = userClaims.Subject
 	}
 
 	// Get subscription information from database
