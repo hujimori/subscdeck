@@ -34,6 +34,15 @@ type SignupRequest struct {
 	Password string `json:"password"`
 }
 
+type VerifyRequest struct {
+	Username string `json:"username"`
+	Code     string `json:"code"`
+}
+
+type ResendCodeRequest struct {
+	Username string `json:"username"`
+}
+
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	IDToken      string `json:"id_token"`
@@ -763,5 +772,137 @@ func SignupHandler(c echo.Context) error {
 		"userSub": aws.ToString(result.UserSub),
 		"userConfirmed": result.UserConfirmed,
 		"redirect": "/verify",
+	})
+}
+
+func VerifyHandler(c echo.Context) error {
+	// Parse request body
+	var req VerifyRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate input
+	if req.Username == "" || req.Code == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Username and verification code are required")
+	}
+
+	// Get environment variables
+	clientID := os.Getenv("COGNITO_APP_CLIENT_ID")
+	clientSecret := os.Getenv("COGNITO_APP_CLIENT_SECRET")
+	
+	if clientID == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Server configuration error")
+	}
+
+	// Find the actual username that was generated during signup
+	// For simplicity, we'll try to construct it - in production you might store this mapping
+	// For now, we'll need to get this from somewhere else or handle it differently
+	
+	// Calculate SECRET_HASH if client secret is configured
+	var secretHash *string
+	if clientSecret != "" {
+		hash := calculateSecretHash(req.Username, clientID, clientSecret)
+		secretHash = aws.String(hash)
+	}
+
+	// Prepare ConfirmSignUp input
+	confirmInput := &cognitoidentityprovider.ConfirmSignUpInput{
+		ClientId:         aws.String(clientID),
+		Username:         aws.String(req.Username),
+		ConfirmationCode: aws.String(req.Code),
+		SecretHash:       secretHash,
+	}
+
+	// Log the request parameters for debugging
+	log.Printf("Attempting verification for user: %s", req.Username)
+
+	// Call Cognito ConfirmSignUp
+	_, err := cognitoClient.ConfirmSignUp(c.Request().Context(), confirmInput)
+	if err != nil {
+		// Log the error for debugging
+		log.Printf("Cognito ConfirmSignUp error: %v", err)
+		
+		// Check for specific error types
+		if strings.Contains(err.Error(), "CodeMismatchException") {
+			return echo.NewHTTPError(http.StatusBadRequest, "認証コードが正しくありません")
+		}
+		if strings.Contains(err.Error(), "ExpiredCodeException") {
+			return echo.NewHTTPError(http.StatusBadRequest, "認証コードの有効期限が切れています")
+		}
+		if strings.Contains(err.Error(), "UserNotFoundException") {
+			return echo.NewHTTPError(http.StatusBadRequest, "ユーザーが見つかりません")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("認証に失敗しました: %v", err))
+	}
+
+	// Log successful verification
+	log.Printf("User verification successful for: %s", req.Username)
+
+	// Return success response
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "認証が完了しました。ログインページに移動します。",
+	})
+}
+
+func ResendCodeHandler(c echo.Context) error {
+	// Parse request body
+	var req ResendCodeRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate input
+	if req.Username == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Username is required")
+	}
+
+	// Get environment variables
+	clientID := os.Getenv("COGNITO_APP_CLIENT_ID")
+	clientSecret := os.Getenv("COGNITO_APP_CLIENT_SECRET")
+	
+	if clientID == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Server configuration error")
+	}
+
+	// Calculate SECRET_HASH if client secret is configured
+	var secretHash *string
+	if clientSecret != "" {
+		hash := calculateSecretHash(req.Username, clientID, clientSecret)
+		secretHash = aws.String(hash)
+	}
+
+	// Prepare ResendConfirmationCode input
+	resendInput := &cognitoidentityprovider.ResendConfirmationCodeInput{
+		ClientId:   aws.String(clientID),
+		Username:   aws.String(req.Username),
+		SecretHash: secretHash,
+	}
+
+	// Log the request parameters for debugging
+	log.Printf("Attempting to resend confirmation code for user: %s", req.Username)
+
+	// Call Cognito ResendConfirmationCode
+	_, err := cognitoClient.ResendConfirmationCode(c.Request().Context(), resendInput)
+	if err != nil {
+		// Log the error for debugging
+		log.Printf("Cognito ResendConfirmationCode error: %v", err)
+		
+		// Check for specific error types
+		if strings.Contains(err.Error(), "UserNotFoundException") {
+			return echo.NewHTTPError(http.StatusBadRequest, "ユーザーが見つかりません")
+		}
+		if strings.Contains(err.Error(), "InvalidParameterException") {
+			return echo.NewHTTPError(http.StatusBadRequest, "無効なパラメータです")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("コードの再送に失敗しました: %v", err))
+	}
+
+	// Log successful resend
+	log.Printf("Confirmation code resent successfully for user: %s", req.Username)
+
+	// Return success response
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "新しい認証コードを送信しました。",
 	})
 }

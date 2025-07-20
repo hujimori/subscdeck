@@ -73,6 +73,8 @@ func main() {
 	e.GET("/signup", handler.SignupPageHandler)
 	e.POST("/signup", handler.SignupHandler)
 	e.GET("/verify", handler.VerifyPageHandler)
+	e.POST("/verify", handler.VerifyHandler)
+	e.POST("/resend-code", handler.ResendCodeHandler)
 
 	// Start server
 	port := os.Getenv("PORT")
