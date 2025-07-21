@@ -571,9 +571,9 @@
             <div class="graph-header">
                 <h2 id="graphTitle">利用単価の推移</h2>
                 <div class="period-selector">
-                    <button type="button" class="period-btn active" onclick="changePeriod(3, this)">3ヶ月</button>
-                    <button type="button" class="period-btn" onclick="changePeriod(6, this)">6ヶ月</button>
-                    <button type="button" class="period-btn" onclick="changePeriod(12, this)">12ヶ月</button>
+                    <button type="button" id="btn-3m" class="period-btn active">3ヶ月</button>
+                    <button type="button" id="btn-6m" class="period-btn">6ヶ月</button>
+                    <button type="button" id="btn-12m" class="period-btn">12ヶ月</button>
                 </div>
             </div>
             <canvas id="usageChart"></canvas>
@@ -911,14 +911,6 @@
             await loadGraphData(3);
         }
         
-        async function changePeriod(period, buttonElement) {
-            // ボタンのアクティブ状態を更新
-            document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
-            buttonElement.classList.add('active');
-            
-            currentPeriod = period;
-            await loadGraphData(period);
-        }
         
         async function loadGraphData(period) {
             if (!isLoggedIn) {
@@ -1030,6 +1022,9 @@
                 // グラフコンテナを表示
                 document.getElementById('graphContainer').style.display = 'block';
                 
+                // 期間切り替えボタンにイベントリスナーを追加
+                setupPeriodButtons(usageStats);
+                
             } catch (error) {
                 console.error('Error:', error);
                 alert('グラフの表示に失敗しました');
@@ -1048,6 +1043,70 @@
             if (currentChart) {
                 currentChart.resetZoom();
             }
+        }
+        
+        // 期間切り替えボタンの設定
+        function setupPeriodButtons(usageStats) {
+            const btn3m = document.getElementById('btn-3m');
+            const btn6m = document.getElementById('btn-6m');
+            const btn12m = document.getElementById('btn-12m');
+            
+            // 既存のイベントリスナーを削除
+            btn3m.replaceWith(btn3m.cloneNode(true));
+            btn6m.replaceWith(btn6m.cloneNode(true));
+            btn12m.replaceWith(btn12m.cloneNode(true));
+            
+            // 新しい要素を取得
+            const newBtn3m = document.getElementById('btn-3m');
+            const newBtn6m = document.getElementById('btn-6m');
+            const newBtn12m = document.getElementById('btn-12m');
+            
+            // 3ヶ月ボタン
+            newBtn3m.addEventListener('click', () => {
+                updateActiveButton(newBtn3m);
+                updateChartRange(3, usageStats);
+            });
+            
+            // 6ヶ月ボタン
+            newBtn6m.addEventListener('click', () => {
+                updateActiveButton(newBtn6m);
+                updateChartRange(6, usageStats);
+            });
+            
+            // 12ヶ月ボタン
+            newBtn12m.addEventListener('click', () => {
+                updateActiveButton(newBtn12m);
+                updateChartRange(12, usageStats);
+            });
+        }
+        
+        // アクティブボタンの更新
+        function updateActiveButton(activeButton) {
+            document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+            activeButton.classList.add('active');
+        }
+        
+        // グラフの表示範囲を更新
+        function updateChartRange(months, usageStats) {
+            if (!currentChart || !usageStats || usageStats.length === 0) {
+                return;
+            }
+            
+            // 現在の日付を基準に期間を計算
+            const now = new Date();
+            const startDate = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+            const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            
+            // YYYY-MM形式でmin/maxを設定
+            const minMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+            const maxMonth = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
+            
+            // Chart.jsの表示範囲を更新
+            currentChart.options.scales.x.min = minMonth;
+            currentChart.options.scales.x.max = maxMonth;
+            
+            // グラフを再描画
+            currentChart.update();
         }
 
         // ページネーション用の変数
