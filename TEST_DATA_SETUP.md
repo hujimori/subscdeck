@@ -1,39 +1,25 @@
 # テストデータ自動投入ガイド
 
 ## 概要
-開発環境でサーバーを起動するたびに、自動的にテストデータが投入される機能です。
+開発環境でサーバーを起動するたびに、自動的にtest001ユーザー用のテストデータが投入される機能です。
+
+## 設定済みのテストユーザー
+
+**Username**: `test001`  
+**User ID**: `77448a08-9001-70cf-ba00-98f2b665608b`
 
 ## 設定方法
 
-### 1. testユーザーでサインアップ
-まず、通常通りアプリケーションでユーザー名 `test` でサインアップしてください。
-
-### 2. testユーザーのIDを確認
-サインアップ後、Cognitoが生成したユーザーIDを確認します。以下のいずれかの方法で確認できます：
-
-#### 方法A: ダッシュボードのネットワークタブから確認
-1. testユーザーでログイン
-2. ブラウザの開発者ツールを開く
-3. ネットワークタブで `/api/subscriptions` のレスポンスを確認
-4. `user_id` フィールドの値をコピー
-
-#### 方法B: データベースから確認
-```bash
-sqlite3 subscdeck.db
-sqlite> SELECT DISTINCT user_id FROM subscriptions;
-```
-
-### 3. 環境変数の設定
+### 環境変数の設定
 ```bash
 # 開発環境モード
 export APP_ENV=development
 
-# testユーザーのID（例：Cognitoが生成したUUID）
-export TEST_USER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-
 # その他の必要な環境変数
 export AWS_PROFILE=subscdeck-dev
 ```
+
+**注意**: ユーザーIDはコードに直接組み込まれているため、`TEST_USER_ID`環境変数の設定は不要です。
 
 ### 4. サーバー起動
 ```bash
