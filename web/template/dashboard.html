@@ -7,15 +7,20 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
+            display: flex;
+            gap: 20px;
         }
         h1 {
             text-align: center;
             color: #333;
             margin-bottom: 40px;
+        }
+        .main-container {
+            flex: 1;
         }
         .container {
             background: white;
@@ -103,6 +108,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        .subscription-item:hover {
+            background-color: #e9ecef;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .subscription-info {
             flex: 1;
@@ -201,11 +212,202 @@
         .logout-btn:hover {
             background-color: #545b62;
         }
+        
+        /* サイドバーのスタイル */
+        .sidebar {
+            width: 400px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            height: fit-content;
+            display: none;
+            position: sticky;
+            top: 20px;
+        }
+        .sidebar.visible {
+            display: block;
+        }
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+        .close-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .close-btn:hover {
+            background: #545b62;
+        }
+        
+        /* ヒートマップのスタイル */
+        .heatmap-section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .heatmap-container {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .heatmap-month {
+            margin-bottom: 20px;
+        }
+        .month-label {
+            font-weight: bold;
+            font-size: 14px;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        .heatmap-calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            font-size: 12px;
+        }
+        .heatmap-day {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            background: #f1f3f4;
+            color: #5f6368;
+            font-size: 11px;
+        }
+        .heatmap-day.has-usage {
+            background: #28a745;
+            color: white;
+        }
+        .heatmap-day.usage-1 {
+            background: #c6f7d0;
+            color: #155724;
+        }
+        .heatmap-day.usage-2 {
+            background: #9be7a8;
+            color: #155724;
+        }
+        .heatmap-day.usage-3 {
+            background: #68d391;
+            color: #155724;
+        }
+        .heatmap-day.usage-4 {
+            background: #38a169;
+            color: white;
+        }
+        .heatmap-day.usage-high {
+            background: #2f7d32;
+            color: white;
+        }
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 10px;
+            font-size: 11px;
+            color: #6c757d;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        /* 統計サマリーのスタイル */
+        .stats-section {
+            margin-bottom: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            gap: 15px;
+        }
+        .stat-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .stat-label {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .stat-change {
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .stat-change.positive {
+            color: #28a745;
+        }
+        .stat-change.negative {
+            color: #dc3545;
+        }
+        .weekday-stats {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .weekday-item {
+            text-align: center;
+            padding: 8px 4px;
+            background: #f1f3f4;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        .weekday-item.popular {
+            background: #007bff;
+            color: white;
+        }
+        .weekday-label {
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+        .weekday-count {
+            font-weight: bold;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="container">
+    <div class="main-container">
+        <div class="container">
         <div class="header-container">
             <h1>SubscDeck</h1>
             {{ if .IsLoggedIn }}
@@ -253,6 +455,68 @@
             <h2 id="graphTitle">利用単価の推移</h2>
             <canvas id="usageChart"></canvas>
             <button type="button" onclick="hideGraph()" style="margin-top: 10px;">閉じる</button>
+        </div>
+        </div>
+    </div>
+
+    <!-- サイドバー -->
+    <div class="sidebar" id="usageSidebar">
+        <div class="sidebar-header">
+            <h3 class="sidebar-title" id="sidebarTitle">利用履歴</h3>
+            <button class="close-btn" onclick="closeSidebar()">閉じる</button>
+        </div>
+        
+        <div class="stats-section">
+            <div class="section-title">📊 統計サマリー</div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">今月の利用回数</div>
+                    <div class="stat-value" id="thisMonthCount">-</div>
+                    <span class="stat-change" id="monthComparison"></span>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">最も利用の多い曜日</div>
+                    <div class="stat-value" id="mostPopularWeekday">-</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <div class="stat-label">曜日別利用回数</div>
+                <div class="weekday-stats" id="weekdayStats"></div>
+            </div>
+        </div>
+        
+        <div class="heatmap-section">
+            <div class="section-title">📅 利用履歴ヒートマップ</div>
+            <div class="heatmap-container" id="heatmapContainer">
+                <div id="heatmapContent">読み込み中...</div>
+                <div class="heatmap-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f1f3f4;"></div>
+                        <span>利用なし</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #c6f7d0;"></div>
+                        <span>1回</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #9be7a8;"></div>
+                        <span>2回</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #68d391;"></div>
+                        <span>3回</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #38a169;"></div>
+                        <span>4回</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2f7d32;"></div>
+                        <span>5回以上</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -327,17 +591,17 @@
                 const createdDate = new Date(sub.created_at).toLocaleDateString('ja-JP');
                 
                 item.innerHTML = `
-                    <div class="subscription-info">
+                    <div class="subscription-info" onclick="showUsageDetails('${sub.id}', '${sub.service_name}')" style="cursor: pointer;">
                         <div class="subscription-name">${sub.service_name}</div>
                         <div class="subscription-date">登録日: ${createdDate}</div>
                         <div class="subscription-usage">今月の利用: ${sub.monthly_usage_count}${sub.usage_unit || '回'}</div>
                     </div>
                     <div class="subscription-price">¥${sub.price.toLocaleString()}</div>
                     {{ if .IsLoggedIn }}
-                        <button type="button" class="usage-btn" onclick="addUsageLog('${sub.id}')">+1${sub.usage_unit || ''}</button>
-                        <button type="button" class="graph-btn" onclick="showGraph('${sub.id}', '${sub.service_name}')">グラフ</button>
-                        <a href="/subscriptions/edit?id=${sub.id}" class="edit-btn">編集</a>
-                        <button type="button" class="delete-btn" onclick="deleteSubscription('${sub.id}')">削除</button>
+                        <button type="button" class="usage-btn" onclick="event.stopPropagation(); addUsageLog('${sub.id}')">+1${sub.usage_unit || ''}</button>
+                        <button type="button" class="graph-btn" onclick="event.stopPropagation(); showGraph('${sub.id}', '${sub.service_name}')">グラフ</button>
+                        <a href="/subscriptions/edit?id=${sub.id}" class="edit-btn" onclick="event.stopPropagation()">編集</a>
+                        <button type="button" class="delete-btn" onclick="event.stopPropagation(); deleteSubscription('${sub.id}')">削除</button>
                     {{ end }}
                 `;
                 
@@ -578,6 +842,179 @@
                 currentChart.destroy();
                 currentChart = null;
             }
+        }
+
+        // 利用履歴詳細を表示する関数
+        async function showUsageDetails(subscriptionId, serviceName) {
+            if (!isLoggedIn) {
+                alert('ログインが必要です');
+                window.location.href = '/';
+                return;
+            }
+
+            // サイドバーのタイトルを更新
+            document.getElementById('sidebarTitle').textContent = `${serviceName} - 利用履歴`;
+            
+            // ローディング表示
+            document.getElementById('heatmapContent').innerHTML = '読み込み中...';
+            document.getElementById('thisMonthCount').textContent = '-';
+            document.getElementById('mostPopularWeekday').textContent = '-';
+            document.getElementById('monthComparison').textContent = '';
+            
+            // サイドバーを表示
+            document.getElementById('usageSidebar').classList.add('visible');
+
+            try {
+                const response = await fetch(`/api/subscriptions/${subscriptionId}/usage_details`);
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('認証エラー: ログインし直してください');
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('利用履歴の取得に失敗しました');
+                }
+                
+                const data = await response.json();
+                
+                // 統計サマリーを表示
+                displayStats(data);
+                
+                // ヒートマップを生成
+                generateHeatmap(data.usage_logs);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('heatmapContent').innerHTML = 'エラーが発生しました';
+                alert('利用履歴の表示に失敗しました');
+            }
+        }
+
+        // 統計サマリーを表示する関数
+        function displayStats(data) {
+            // 今月の利用回数と比較
+            document.getElementById('thisMonthCount').textContent = data.this_month_count;
+            
+            const comparison = data.month_comparison;
+            const comparisonEl = document.getElementById('monthComparison');
+            
+            if (comparison > 0) {
+                comparisonEl.textContent = `▲${comparison.toFixed(1)}%`;
+                comparisonEl.className = 'stat-change positive';
+            } else if (comparison < 0) {
+                comparisonEl.textContent = `▼${Math.abs(comparison).toFixed(1)}%`;
+                comparisonEl.className = 'stat-change negative';
+            } else {
+                comparisonEl.textContent = '±0%';
+                comparisonEl.className = 'stat-change';
+            }
+            
+            // 最も利用の多い曜日
+            document.getElementById('mostPopularWeekday').textContent = data.most_popular_weekday || '-';
+            
+            // 曜日別統計
+            const weekdayStatsEl = document.getElementById('weekdayStats');
+            weekdayStatsEl.innerHTML = '';
+            
+            data.weekday_stats.forEach(stat => {
+                const item = document.createElement('div');
+                item.className = 'weekday-item';
+                if (stat.weekday === data.most_popular_weekday) {
+                    item.classList.add('popular');
+                }
+                
+                item.innerHTML = `
+                    <div class="weekday-label">${stat.weekday.substring(0, 1)}</div>
+                    <div class="weekday-count">${stat.count}</div>
+                `;
+                
+                weekdayStatsEl.appendChild(item);
+            });
+        }
+
+        // ヒートマップを生成する関数
+        function generateHeatmap(usageLogs) {
+            const heatmapContent = document.getElementById('heatmapContent');
+            heatmapContent.innerHTML = '';
+            
+            // 利用日ごとの回数をカウント
+            const usageByDate = {};
+            usageLogs.forEach(log => {
+                const date = new Date(log.created_at).toDateString();
+                usageByDate[date] = (usageByDate[date] || 0) + 1;
+            });
+            
+            // 過去3ヶ月のカレンダーを生成
+            const today = new Date();
+            const months = [];
+            
+            for (let i = 2; i >= 0; i--) {
+                const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                months.push(month);
+            }
+            
+            months.forEach(month => {
+                const monthContainer = document.createElement('div');
+                monthContainer.className = 'heatmap-month';
+                
+                const monthLabel = document.createElement('div');
+                monthLabel.className = 'month-label';
+                monthLabel.textContent = month.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' });
+                
+                const calendar = document.createElement('div');
+                calendar.className = 'heatmap-calendar';
+                
+                // 月の最初の日の曜日を取得
+                const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+                const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+                const startDay = firstDay.getDay(); // 0 = 日曜日
+                
+                // 空のセルを追加（月曜日から始まるように調整）
+                const mondayStart = (startDay === 0) ? 6 : startDay - 1;
+                for (let i = 0; i < mondayStart; i++) {
+                    const emptyDay = document.createElement('div');
+                    emptyDay.className = 'heatmap-day';
+                    calendar.appendChild(emptyDay);
+                }
+                
+                // 月の日付を追加
+                for (let day = 1; day <= lastDay.getDate(); day++) {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = 'heatmap-day';
+                    dayEl.textContent = day;
+                    
+                    const dayDate = new Date(month.getFullYear(), month.getMonth(), day);
+                    const dayKey = dayDate.toDateString();
+                    const usageCount = usageByDate[dayKey] || 0;
+                    
+                    if (usageCount > 0) {
+                        if (usageCount === 1) {
+                            dayEl.classList.add('usage-1');
+                        } else if (usageCount === 2) {
+                            dayEl.classList.add('usage-2');
+                        } else if (usageCount === 3) {
+                            dayEl.classList.add('usage-3');
+                        } else if (usageCount === 4) {
+                            dayEl.classList.add('usage-4');
+                        } else {
+                            dayEl.classList.add('usage-high');
+                        }
+                        dayEl.title = `${usageCount}回利用`;
+                    }
+                    
+                    calendar.appendChild(dayEl);
+                }
+                
+                monthContainer.appendChild(monthLabel);
+                monthContainer.appendChild(calendar);
+                heatmapContent.appendChild(monthContainer);
+            });
+        }
+
+        // サイドバーを閉じる関数
+        function closeSidebar() {
+            document.getElementById('usageSidebar').classList.remove('visible');
         }
 
         // 初回表示 - APIからデータを取得
