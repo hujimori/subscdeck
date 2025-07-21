@@ -402,6 +402,40 @@
         .weekday-count {
             font-weight: bold;
         }
+        
+        /* ツールチップのスタイル */
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .tooltip::before {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid rgba(0, 0, 0, 0.9);
+        }
+        .tooltip-date {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .tooltip-count {
+            color: #81e6d9;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -518,6 +552,12 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- ツールチップ -->
+    <div class="tooltip" id="heatmapTooltip">
+        <div class="tooltip-date" id="tooltipDate"></div>
+        <div class="tooltip-count">利用回数: <span id="tooltipCount"></span>回</div>
     </div>
 
     <script>
@@ -988,6 +1028,15 @@
                     const dayKey = dayDate.toDateString();
                     const usageCount = usageByDate[dayKey] || 0;
                     
+                    // data属性を追加
+                    dayEl.setAttribute('data-date', dayDate.toLocaleDateString('ja-JP', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        weekday: 'short'
+                    }));
+                    dayEl.setAttribute('data-count', usageCount);
+                    
                     if (usageCount > 0) {
                         if (usageCount === 1) {
                             dayEl.classList.add('usage-1');
@@ -1000,7 +1049,11 @@
                         } else {
                             dayEl.classList.add('usage-high');
                         }
-                        dayEl.title = `${usageCount}回利用`;
+                        
+                        // イベントリスナーを追加
+                        dayEl.addEventListener('mouseover', showTooltip);
+                        dayEl.addEventListener('mouseout', hideTooltip);
+                        dayEl.addEventListener('mousemove', moveTooltip);
                     }
                     
                     calendar.appendChild(dayEl);
@@ -1015,6 +1068,39 @@
         // サイドバーを閉じる関数
         function closeSidebar() {
             document.getElementById('usageSidebar').classList.remove('visible');
+        }
+
+        // ツールチップを表示する関数
+        function showTooltip(event) {
+            const tooltip = document.getElementById('heatmapTooltip');
+            const date = event.target.getAttribute('data-date');
+            const count = event.target.getAttribute('data-count');
+            
+            document.getElementById('tooltipDate').textContent = date;
+            document.getElementById('tooltipCount').textContent = count;
+            
+            tooltip.style.display = 'block';
+            moveTooltip(event);
+        }
+
+        // ツールチップを移動する関数
+        function moveTooltip(event) {
+            const tooltip = document.getElementById('heatmapTooltip');
+            const rect = event.target.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            // ツールチップを要素の上に配置
+            const left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+            const top = rect.top - tooltipRect.height - 10;
+            
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+        }
+
+        // ツールチップを非表示にする関数
+        function hideTooltip() {
+            const tooltip = document.getElementById('heatmapTooltip');
+            tooltip.style.display = 'none';
         }
 
         // 初回表示 - APIからデータを取得
