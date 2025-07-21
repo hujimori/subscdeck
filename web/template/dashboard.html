@@ -894,6 +894,7 @@
         let currentPeriod = 3;
         let currentSubscriptionId = null;
         let currentServiceName = '';
+        let allUsageData = []; // 全期間データを保持
         
         async function showGraph(subscriptionId, serviceName) {
             currentSubscriptionId = subscriptionId;
@@ -908,11 +909,16 @@
             });
             
             currentPeriod = 3;
-            await loadGraphData(3);
+            
+            // 全期間データを一度だけ取得
+            await loadAllUsageData();
+            
+            // 初期表示は3ヶ月範囲で描画
+            drawGraphWithRange(3);
         }
         
-        
-        async function loadGraphData(period) {
+        // 全期間データを一度だけ取得
+        async function loadAllUsageData() {
             if (!isLoggedIn) {
                 alert('ログインが必要です');
                 window.location.href = '/';
@@ -920,9 +926,8 @@
             }
             
             try {
-                // 12ヶ月の場合は全データを取得
-                const periodParam = period === 12 ? 'all' : period;
-                const response = await fetch(`/api/subscriptions/${currentSubscriptionId}/usage_stats?period=${periodParam}`);
+                // 全データを取得（12ヶ月分または全期間）
+                const response = await fetch(`/api/subscriptions/${currentSubscriptionId}/usage_stats?period=all`);
                 
                 if (!response.ok) {
                     if (response.status === 401) {
@@ -933,125 +938,120 @@
                     throw new Error('データの取得に失敗しました');
                 }
                 
-                const usageStats = await response.json();
-                
-                // グラフタイトルを更新
-                let periodText = period === 12 && usageStats.length > 12 ? '全期間' : `${period}ヶ月間`;
-                document.getElementById('graphTitle').textContent = `${currentServiceName} - 利用単価の推移 (${periodText})`;
-                
-                // 既存のチャートを破棄
-                if (currentChart) {
-                    currentChart.destroy();
-                }
-                
-                // 表示範囲を実際のデータに基づいて計算
-                let minMonth, maxMonth;
-                
-                if (usageStats.length === 0) {
-                    // データが空の場合は、デフォルトで現在から指定期間前まで
-                    const now = new Date();
-                    const startDate = new Date(now.getFullYear(), now.getMonth() - period + 1, 1);
-                    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                    minMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
-                    maxMonth = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
-                } else {
-                    // 実際のデータ範囲に基づいて表示範囲を設定
-                    const sortedData = usageStats.map(s => s.month).sort();
-                    minMonth = sortedData[0];
-                    maxMonth = sortedData[sortedData.length - 1];
-                    
-                    // デバッグログ
-                    console.log(`Period: ${period}, Data range: ${minMonth} to ${maxMonth}, Data count: ${usageStats.length}`);
-                }
-                
-                // Chart.jsでグラフを描画
-                const ctx = document.getElementById('usageChart').getContext('2d');
-                
-                currentChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: usageStats.map(stat => stat.month),
-                        datasets: [{
-                            label: '利用単価 (円)',
-                            data: usageStats.map(stat => stat.cost_per_use),
-                            borderColor: 'rgb(75, 192, 192)',
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            tension: 0.1,
-                            pointRadius: 4,
-                            pointHoverRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                            },
-                            title: {
-                                display: true,
-                                text: '月別利用単価'
-                            },
-                            tooltip: {
-                                enabled: true,
-                                mode: 'index',
-                                intersect: false
-                            },
-                            zoom: {
-                                pan: {
-                                    enabled: true, // パン機能を有効にする
-                                    mode: 'x',     // X軸方向（横）にだけパンを許可する
-                                },
-                                zoom: {
-                                    wheel: {
-                                        enabled: true, // マウスホイールでのズームを有効にする
-                                    },
-                                    pinch: {
-                                        enabled: true, // ピンチ操作でのズームを有効にする
-                                    },
-                                    mode: 'x',     // X軸方向（横）にだけズームを許可する
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: '利用単価 (円)'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: '月'
-                                },
-                                ticks: {
-                                    maxRotation: 45,
-                                    minRotation: 0
-                                },
-                                min: minMonth,
-                                max: maxMonth
-                            }
-                        }
-                    }
-                });
-                
-                // グラフコンテナを表示
-                document.getElementById('graphContainer').style.display = 'block';
-                
-                // 期間切り替えボタンにイベントリスナーを追加
-                setupPeriodButtons();
+                allUsageData = await response.json();
+                console.log(`全期間データ取得完了: ${allUsageData.length}件`, allUsageData);
                 
             } catch (error) {
-                console.error('Error:', error);
-                alert('グラフの表示に失敗しました');
+                console.error('Error loading all usage data:', error);
+                alert('データの取得に失敗しました');
+                allUsageData = []; // エラー時は空データ
             }
         }
+        
+        // 指定期間でグラフを描画
+        function drawGraphWithRange(period) {
+            // グラフタイトルを更新
+            let periodText = period === 12 && allUsageData.length > 12 ? '全期間' : `${period}ヶ月間`;
+            document.getElementById('graphTitle').textContent = `${currentServiceName} - 利用単価の推移 (${periodText})`;
+            
+            // 既存のチャートを破棄
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            
+            // 表示範囲を計算（現在日付ベースで期間に応じて）
+            const now = new Date();
+            const startDate = new Date(now.getFullYear(), now.getMonth() - period + 1, 1);
+            const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const minMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+            const maxMonth = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
+            
+            console.log(`期間: ${period}ヶ月, 表示範囲: ${minMonth} to ${maxMonth}, 全データ: ${allUsageData.length}件`);
+            
+            // Chart.jsでグラフを描画
+            const ctx = document.getElementById('usageChart').getContext('2d');
+            
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allUsageData.map(stat => stat.month), // 全期間データを渡す
+                    datasets: [{
+                        label: '利用単価 (円)',
+                        data: allUsageData.map(stat => stat.cost_per_use), // 全期間データを渡す
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '月別利用単価'
+                        },
+                        tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false
+                        },
+                        zoom: {
+                            pan: {
+                                enabled: true, // パン機能を有効にする
+                                mode: 'x',     // X軸方向（横）にだけパンを許可する
+                            },
+                            zoom: {
+                                wheel: {
+                                    enabled: true, // マウスホイールでのズームを有効にする
+                                },
+                                pinch: {
+                                    enabled: true, // ピンチ操作でのズームを有効にする
+                                },
+                                mode: 'x',     // X軸方向（横）にだけズームを許可する
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '利用単価 (円)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '月'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 0
+                            },
+                            min: minMonth, // 表示範囲の開始
+                            max: maxMonth  // 表示範囲の終了
+                        }
+                    }
+                }
+            });
+            
+            // グラフコンテナを表示
+            document.getElementById('graphContainer').style.display = 'block';
+            
+            // 期間切り替えボタンにイベントリスナーを追加
+            setupPeriodButtons();
+        }
+        
         
         function hideGraph() {
             document.getElementById('graphContainer').style.display = 'none';
@@ -1084,24 +1084,24 @@
             const newBtn12m = document.getElementById('btn-12m');
             
             // 3ヶ月ボタン
-            newBtn3m.addEventListener('click', async () => {
+            newBtn3m.addEventListener('click', () => {
                 updateActiveButton(newBtn3m);
                 currentPeriod = 3;
-                await loadGraphData(3);
+                updateChartDisplayRange(3);
             });
             
             // 6ヶ月ボタン
-            newBtn6m.addEventListener('click', async () => {
+            newBtn6m.addEventListener('click', () => {
                 updateActiveButton(newBtn6m);
                 currentPeriod = 6;
-                await loadGraphData(6);
+                updateChartDisplayRange(6);
             });
             
             // 12ヶ月ボタン
-            newBtn12m.addEventListener('click', async () => {
+            newBtn12m.addEventListener('click', () => {
                 updateActiveButton(newBtn12m);
                 currentPeriod = 12;
-                await loadGraphData(12);
+                updateChartDisplayRange(12);
             });
         }
         
@@ -1109,6 +1109,33 @@
         function updateActiveButton(activeButton) {
             document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
             activeButton.classList.add('active');
+        }
+        
+        // 表示範囲のみ更新（データは再取得しない）
+        function updateChartDisplayRange(period) {
+            if (!currentChart || allUsageData.length === 0) {
+                return;
+            }
+            
+            // 表示範囲を計算（現在日付ベースで期間に応じて）
+            const now = new Date();
+            const startDate = new Date(now.getFullYear(), now.getMonth() - period + 1, 1);
+            const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const minMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+            const maxMonth = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
+            
+            console.log(`表示範囲更新: ${period}ヶ月, 範囲: ${minMonth} to ${maxMonth}, 全データ: ${allUsageData.length}件`);
+            
+            // グラフタイトルを更新
+            let periodText = period === 12 && allUsageData.length > 12 ? '全期間' : `${period}ヶ月間`;
+            document.getElementById('graphTitle').textContent = `${currentServiceName} - 利用単価の推移 (${periodText})`;
+            
+            // Chart.jsの表示範囲を更新（データはそのまま）
+            currentChart.options.scales.x.min = minMonth;
+            currentChart.options.scales.x.max = maxMonth;
+            
+            // グラフを再描画
+            currentChart.update();
         }
 
         // ページネーション用の変数
