@@ -273,6 +273,7 @@
             padding: 15px;
             border-radius: 6px;
             border: 1px solid #e9ecef;
+            position: relative;
         }
         .heatmap-month {
             margin-bottom: 20px;
@@ -405,7 +406,7 @@
         
         /* ツールチップのスタイル */
         .tooltip {
-            position: absolute;
+            position: fixed;
             background-color: rgba(0, 0, 0, 0.9);
             color: white;
             padding: 8px 12px;
@@ -1086,15 +1087,23 @@
         // ツールチップを移動する関数
         function moveTooltip(event) {
             const tooltip = document.getElementById('heatmapTooltip');
-            const rect = event.target.getBoundingClientRect();
-            const tooltipRect = tooltip.getBoundingClientRect();
+            const target = event.target;
+            const targetRect = target.getBoundingClientRect();
             
-            // ツールチップを要素の上に配置
-            const left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-            const top = rect.top - tooltipRect.height - 10;
+            // ツールチップの幅と高さを取得（表示状態で取得する必要がある）
+            const tooltipWidth = tooltip.offsetWidth;
+            const tooltipHeight = tooltip.offsetHeight;
             
-            tooltip.style.left = `${left}px`;
-            tooltip.style.top = `${top}px`;
+            // ターゲット要素の中央上部に配置
+            const left = targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2);
+            const top = targetRect.top - tooltipHeight - 10;
+            
+            // 画面からはみ出さないように調整
+            const adjustedLeft = Math.max(10, Math.min(left, window.innerWidth - tooltipWidth - 10));
+            const adjustedTop = Math.max(10, top);
+            
+            tooltip.style.left = `${adjustedLeft}px`;
+            tooltip.style.top = `${adjustedTop}px`;
         }
 
         // ツールチップを非表示にする関数
