@@ -39,6 +39,34 @@ func main() {
 	}
 	defer database.Close()
 
+	// Seed test data in development environment
+	if os.Getenv("APP_ENV") == "development" {
+		testUserID := os.Getenv("TEST_USER_ID")
+		if testUserID == "" {
+			log.Println("TEST_USER_ID not set, attempting to find test user...")
+			// Try to find test user ID from database
+			foundID, err := database.GetTestUserID()
+			if err != nil {
+				log.Printf("Error finding test user ID: %v", err)
+			} else if foundID != "" {
+				testUserID = foundID
+				log.Printf("Found test user ID: %s", testUserID)
+			}
+		}
+		
+		if testUserID != "" {
+			log.Println("Running seed data for development environment...")
+			err := database.SeedDataForTestUser(testUserID)
+			if err != nil {
+				log.Printf("Warning: Failed to seed test data: %v", err)
+			} else {
+				log.Println("Test data seeded successfully")
+			}
+		} else {
+			log.Println("No test user ID available, skipping seed data. Set TEST_USER_ID environment variable.")
+		}
+	}
+
 	// Initialize AWS Cognito client
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx)
