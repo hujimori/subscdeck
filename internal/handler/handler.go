@@ -90,6 +90,13 @@ type UsageStatResponse struct {
 	CostPerUse  int    `json:"cost_per_use"`
 }
 
+type UsageDataInfo struct {
+	TotalMonths int `json:"total_months"`
+	SuggestedPeriod int `json:"suggested_period"`
+	FirstDataOffset int `json:"first_data_offset"`
+	LastDataOffset int `json:"last_data_offset"`
+}
+
 var (
 	cognitoClient *cognitoidentityprovider.Client
 )
@@ -123,6 +130,12 @@ func DashboardHandler(c echo.Context) error {
 	
 	// Debug log to check user ID extraction
 	log.Printf("DashboardHandler: UserID extracted from JWT: %s", userID)
+
+	// Transfer test data to user if this is their first time
+	err := database.TransferTestDataToUser(userID)
+	if err != nil {
+		log.Printf("Warning: Failed to transfer test data: %v", err)
+	}
 
 	// Get all subscriptions from database for this user
 	subscriptions, err := database.GetAllSubscriptions(userID)
@@ -293,6 +306,12 @@ func GetSubscriptionsHandler(c echo.Context) error {
 	
 	// Debug log to check user ID extraction
 	log.Printf("GetSubscriptionsHandler: UserID extracted from JWT: %s", userID)
+
+	// Transfer test data to user if this is their first time
+	err := database.TransferTestDataToUser(userID)
+	if err != nil {
+		log.Printf("Warning: Failed to transfer test data: %v", err)
+	}
 
 	// Get all subscriptions from database for this user
 	subscriptions, err := database.GetAllSubscriptions(userID)
@@ -583,6 +602,29 @@ func GetUsageStatsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid subscription ID")
 	}
 
+	// Get period parameter (default: 3 months)
+	periodParam := c.QueryParam("period")
+	monthsBack := 3 // default
+	getAllData := false
+	
+	if periodParam != "" {
+		if periodParam == "all" {
+			getAllData = true
+			monthsBack = 60 // Maximum 5 years of data
+		} else if p, err := strconv.Atoi(periodParam); err == nil && (p == 3 || p == 6 || p == 12) {
+			monthsBack = p
+		}
+	}
+
+	// Get offset parameter (default: 0)
+	offsetParam := c.QueryParam("offset")
+	monthOffset := 0
+	if offsetParam != "" {
+		if o, err := strconv.Atoi(offsetParam); err == nil && o >= 0 {
+			monthOffset = o
+		}
+	}
+
 	// Get user info from JWT context (set by auth middleware)
 	userContext := c.Get("user")
 	if userContext == nil {
@@ -602,12 +644,12 @@ func GetUsageStatsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "Subscription not found")
 	}
 
-	// Calculate usage statistics for the last 3 months
+	// Calculate usage statistics for the specified period with offset
 	var usageStats []UsageStatResponse
 	now := time.Now()
 	
-	for i := 2; i >= 0; i-- {
-		targetDate := now.AddDate(0, -i, 0)
+	for i := monthsBack - 1; i >= 0; i-- {
+		targetDate := now.AddDate(0, -(i + monthOffset), 0)
 		year := targetDate.Year()
 		month := int(targetDate.Month())
 		
@@ -615,6 +657,11 @@ func GetUsageStatsHandler(c echo.Context) error {
 		usageCount, err := database.GetMonthlyUsageCountByMonth(subscriptionIDInt, userID, year, month)
 		if err != nil {
 			log.Printf("Error fetching monthly usage count for subscription %s, year %d, month %d: %v", subscriptionID, year, month, err)
+			continue
+		}
+		
+		// Skip months with no data when getting all data
+		if getAllData && usageCount == 0 {
 			continue
 		}
 		
@@ -634,6 +681,88 @@ func GetUsageStatsHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, usageStats)
+}
+
+func GetUsageDataInfoHandler(c echo.Context) error {
+	// Get subscription ID from URL parameter
+	subscriptionID := c.Param("id")
+	if subscriptionID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Subscription ID is required")
+	}
+
+	// Validate that subscription ID is a valid number
+	subscriptionIDInt, err := strconv.Atoi(subscriptionID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid subscription ID")
+	}
+
+	// Get user info from JWT context (set by auth middleware)
+	userContext := c.Get("user")
+	if userContext == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "User not authenticated")
+	}
+	
+	// Extract user ID from JWT claims
+	userID := "unknown_user" // Default fallback
+	if userClaims, ok := userContext.(*middleware.CognitoJWTClaims); ok {
+		userID = userClaims.Subject
+	}
+
+	// Get subscription information from database to verify access
+	_, err = database.GetSubscriptionByID(subscriptionID, userID)
+	if err != nil {
+		log.Printf("Error fetching subscription for user %s: %v", userID, err)
+		return echo.NewHTTPError(http.StatusNotFound, "Subscription not found")
+	}
+
+	// Find data range
+	now := time.Now()
+	firstDataOffset := -1
+	lastDataOffset := 0
+	totalMonths := 0
+	
+	// Check up to 60 months back to find data range
+	for i := 0; i < 60; i++ {
+		targetDate := now.AddDate(0, -i, 0)
+		year := targetDate.Year()
+		month := int(targetDate.Month())
+		
+		usageCount, err := database.GetMonthlyUsageCountByMonth(subscriptionIDInt, userID, year, month)
+		if err != nil {
+			continue
+		}
+		
+		if usageCount > 0 {
+			if firstDataOffset == -1 {
+				firstDataOffset = i
+			}
+			lastDataOffset = i
+			totalMonths++
+		}
+	}
+
+	// If no data found, set defaults
+	if firstDataOffset == -1 {
+		firstDataOffset = 0
+		lastDataOffset = 0
+	}
+
+	// Determine suggested period based on data availability
+	var suggestedPeriod int
+	if totalMonths <= 3 {
+		suggestedPeriod = 3
+	} else if totalMonths <= 6 {
+		suggestedPeriod = 6
+	} else {
+		suggestedPeriod = 12
+	}
+
+	return c.JSON(http.StatusOK, UsageDataInfo{
+		TotalMonths:     totalMonths,
+		SuggestedPeriod: suggestedPeriod,
+		FirstDataOffset: firstDataOffset,
+		LastDataOffset:  lastDataOffset,
+	})
 }
 
 func LogoutHandler(c echo.Context) error {

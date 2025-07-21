@@ -17,7 +17,6 @@ import (
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 )
 
-
 func main() {
 	// Load .env file (try .env.local first, then .env)
 	err := godotenv.Load(".env.local")
@@ -39,19 +38,17 @@ func main() {
 	}
 	defer database.Close()
 
-	// Seed test data in development environment
-	if os.Getenv("APP_ENV") == "development" {
+	// Seed sample data in development environment
+	if os.Getenv("ENVIRONMENT") == "development" {
 		// Use the known test user ID for user "test001"
 		testUserID := "77448a08-9001-70cf-ba00-98f2b665608b"
-		
-		log.Println("Running seed data for development environment...")
-		log.Printf("Creating test data for user test001 (ID: %s)", testUserID)
-		
-		err := database.SeedDataForTestUser(testUserID)
+		log.Println("Running sample data insert for development environment...")
+		log.Printf("Creating sample data for user test001 (ID: %s)", testUserID)
+		err := database.InsertDevelopmentSampleData(testUserID)
 		if err != nil {
-			log.Printf("Warning: Failed to seed test data: %v", err)
+			log.Printf("Warning: Failed to insert sample data: %v", err)
 		} else {
-			log.Println("Test data seeded successfully for test001 user")
+			log.Println("Sample data inserted successfully for test001 user")
 		}
 	}
 
@@ -62,7 +59,7 @@ func main() {
 		log.Fatalf("unable to load SDK config: %v", err)
 	}
 	cognitoClient := cognitoidentityprovider.NewFromConfig(cfg)
-	
+
 	// Set Cognito client for handlers
 	handler.SetCognitoClient(cognitoClient)
 
@@ -85,6 +82,7 @@ func main() {
 	e.POST("/subscriptions/update", handler.UpdateSubscriptionFormHandler, middleware.CognitoAuthMiddleware())
 	e.POST("/api/usage_logs", handler.CreateUsageLogHandler, middleware.CognitoAuthMiddleware())
 	e.GET("/api/subscriptions/:id/usage_stats", handler.GetUsageStatsHandler, middleware.CognitoAuthMiddleware())
+	e.GET("/api/subscriptions/:id/usage_data_info", handler.GetUsageDataInfoHandler, middleware.CognitoAuthMiddleware())
 	e.GET("/api/subscriptions/:id/usage_details", handler.GetUsageDetailsHandler, middleware.CognitoAuthMiddleware())
 	e.POST("/logout", handler.LogoutHandler)
 	e.GET("/signup", handler.SignupPageHandler)
