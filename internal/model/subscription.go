@@ -20,3 +20,26 @@ type UsageLog struct {
 	UserID         string    `json:"user_id"`
 	CreatedAt      time.Time `json:"created_at"`
 }
+
+// UsageDetailsResponse represents the detailed usage information response
+type UsageDetailsResponse struct {
+	UsageLogs          []UsageLog          `json:"usage_logs"`
+	MonthlyStats       []MonthlyUsageStat  `json:"monthly_stats"`
+	WeekdayStats       []WeekdayUsageStat  `json:"weekday_stats"`
+	MostPopularWeekday string              `json:"most_popular_weekday"`
+	LastMonthCount     int                 `json:"last_month_count"`
+	ThisMonthCount     int                 `json:"this_month_count"`
+	MonthComparison    float64             `json:"month_comparison"` // Percentage change
+}
+
+// MonthlyUsageStat represents usage statistics for a specific month
+type MonthlyUsageStat struct {
+	Month string `json:"month"` // Format: YYYY-MM
+	Count int    `json:"count"`
+}
+
+// WeekdayUsageStat represents usage statistics for a specific weekday
+type WeekdayUsageStat struct {
+	Weekday string `json:"weekday"` // Monday, Tuesday, etc.
+	Count   int    `json:"count"`
+}

@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -913,4 +914,127 @@ func ResendCodeHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]any{
 		"message": "新しい認証コードを送信しました。",
 	})
+}
+
+func GetUsageDetailsHandler(c echo.Context) error {
+	// Get subscription ID from URL parameter
+	subscriptionID := c.Param("id")
+	if subscriptionID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Subscription ID is required")
+	}
+
+	// Validate that subscription ID is a valid number
+	subscriptionIDInt, err := strconv.Atoi(subscriptionID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid subscription ID")
+	}
+
+	// Get user info from JWT context (set by auth middleware)
+	userContext := c.Get("user")
+	if userContext == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "User not authenticated")
+	}
+	
+	// Extract user ID from JWT claims
+	userID := "unknown_user" // Default fallback
+	if userClaims, ok := userContext.(*middleware.CognitoJWTClaims); ok {
+		userID = userClaims.Subject
+	}
+
+	// Verify subscription belongs to user
+	subscription, err := database.GetSubscriptionByID(subscriptionID, userID)
+	if err != nil {
+		log.Printf("Error fetching subscription for verification: %v", err)
+		return echo.NewHTTPError(http.StatusNotFound, "Subscription not found")
+	}
+	if subscription == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "Subscription not found")
+	}
+
+	// Get all usage logs for this subscription
+	usageLogs, err := database.GetUsageLogsBySubscriptionID(subscriptionIDInt, userID)
+	if err != nil {
+		log.Printf("Error fetching usage logs: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch usage logs")
+	}
+
+	// Calculate statistics
+	response := model.UsageDetailsResponse{
+		UsageLogs: usageLogs,
+	}
+
+	// Calculate monthly stats
+	monthlyMap := make(map[string]int)
+	weekdayMap := make(map[string]int)
+	now := time.Now()
+	lastMonth := now.AddDate(0, -1, 0)
+	thisMonthCount := 0
+	lastMonthCount := 0
+
+	for _, log := range usageLogs {
+		// Monthly stats
+		monthKey := log.CreatedAt.Format("2006-01")
+		monthlyMap[monthKey]++
+
+		// Weekday stats
+		weekday := log.CreatedAt.Weekday().String()
+		weekdayMap[weekday]++
+
+		// This month vs last month comparison
+		if log.CreatedAt.Year() == now.Year() && log.CreatedAt.Month() == now.Month() {
+			thisMonthCount++
+		} else if log.CreatedAt.Year() == lastMonth.Year() && log.CreatedAt.Month() == lastMonth.Month() {
+			lastMonthCount++
+		}
+	}
+
+	// Convert monthly map to sorted slice
+	var monthlyStats []model.MonthlyUsageStat
+	for month, count := range monthlyMap {
+		monthlyStats = append(monthlyStats, model.MonthlyUsageStat{
+			Month: month,
+			Count: count,
+		})
+	}
+	// Sort by month
+	sort.Slice(monthlyStats, func(i, j int) bool {
+		return monthlyStats[i].Month < monthlyStats[j].Month
+	})
+	response.MonthlyStats = monthlyStats
+
+	// Convert weekday map to slice with proper order
+	weekdays := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+	weekdaysJP := []string{"月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日"}
+	var weekdayStats []model.WeekdayUsageStat
+	maxWeekdayCount := 0
+	mostPopularWeekday := ""
+
+	for i, weekday := range weekdays {
+		count := weekdayMap[weekday]
+		weekdayStats = append(weekdayStats, model.WeekdayUsageStat{
+			Weekday: weekdaysJP[i], // Use Japanese weekday name
+			Count:   count,
+		})
+		if count > maxWeekdayCount {
+			maxWeekdayCount = count
+			mostPopularWeekday = weekdaysJP[i]
+		}
+	}
+	response.WeekdayStats = weekdayStats
+	response.MostPopularWeekday = mostPopularWeekday
+
+	// Set month comparison stats
+	response.ThisMonthCount = thisMonthCount
+	response.LastMonthCount = lastMonthCount
+	
+	// Calculate percentage change
+	if lastMonthCount > 0 {
+		response.MonthComparison = float64(thisMonthCount-lastMonthCount) / float64(lastMonthCount) * 100
+	} else if thisMonthCount > 0 {
+		response.MonthComparison = 100 // 100% increase if no usage last month
+	} else {
+		response.MonthComparison = 0
+	}
+
+	return c.JSON(http.StatusOK, response)
 }

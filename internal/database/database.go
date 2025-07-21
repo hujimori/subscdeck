@@ -237,6 +237,30 @@ func DeleteSubscription(id string, userID string) error {
 	return err
 }
 
+// GetUsageLogsBySubscriptionID retrieves all usage logs for a specific subscription
+func GetUsageLogsBySubscriptionID(subscriptionID int, userID string) ([]model.UsageLog, error) {
+	rows, err := db.Query(
+		"SELECT log_id, subscription_id, user_id, created_at FROM subscription_usage_logs WHERE subscription_id = ? AND user_id = ? ORDER BY created_at DESC",
+		subscriptionID, userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var usageLogs []model.UsageLog
+	for rows.Next() {
+		var log model.UsageLog
+		err := rows.Scan(&log.LogID, &log.SubscriptionID, &log.UserID, &log.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		usageLogs = append(usageLogs, log)
+	}
+
+	return usageLogs, rows.Err()
+}
+
 // Close closes the database connection
 func Close() error {
 	if db != nil {
