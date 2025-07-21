@@ -944,6 +944,29 @@
                     currentChart.destroy();
                 }
                 
+                // 表示範囲を動的に計算（期間に基づいて）
+                let minMonth, maxMonth;
+                const now = new Date();
+                
+                if (usageStats.length === 0) {
+                    // データが空の場合は、デフォルトで現在から指定期間前まで
+                    const startDate = new Date(now.getFullYear(), now.getMonth() - period + 1, 1);
+                    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    minMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+                    maxMonth = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
+                } else if (period === 12 && usageStats.length > 12) {
+                    // 12ヶ月で全データを取得した場合は、データ範囲に合わせる
+                    const sortedData = usageStats.map(s => s.month).sort();
+                    minMonth = sortedData[0];
+                    maxMonth = sortedData[sortedData.length - 1];
+                } else {
+                    // 通常の期間指定の場合
+                    const startDate = new Date(now.getFullYear(), now.getMonth() - period + 1, 1);
+                    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    minMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+                    maxMonth = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
+                }
+                
                 // Chart.jsでグラフを描画
                 const ctx = document.getElementById('usageChart').getContext('2d');
                 
@@ -1013,7 +1036,9 @@
                                 ticks: {
                                     maxRotation: 45,
                                     minRotation: 0
-                                }
+                                },
+                                min: minMonth,
+                                max: maxMonth
                             }
                         }
                     }
