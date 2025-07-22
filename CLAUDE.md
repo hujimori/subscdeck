@@ -1,47 +1,51 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、Claude Code (claude.ai/code) がこのリポジトリのコードを扱う際の指針を提供します。
 
-## Project Overview
+## プロジェクト概要
 
-subscdeck is a Go web server using Echo v4 framework with AWS Cognito JWT authentication.
+subscdeckは、Go言語とEcho v4フレームワークを使用したWebアプリケーションです。サブスクリプションサービスの利用状況を記録・可視化することを目的としています。認証基盤にはAWS Cognitoを利用しています。
 
-## Technology Stack
+## 技術スタック
 
-- **Language**: Go 1.21+
-- **Web Framework**: Echo v4
-- **Authentication**: AWS Cognito (JWT with JWKS validation)
+- **言語**: Go 1.22.4
+- **Webフレームワーク**: Echo v4
+- **データベース**: SQLite
+- **認証**: AWS Cognito (JWTとJWKSによる検証)
 - **AWS SDK**: AWS SDK for Go v2
+- **設定管理**: godotenv (環境変数 or .envファイル)
 
-## Common Commands
+## 主なコマンド
 
 ```bash
-# Install dependencies
-go mod download
+# 依存関係をインストール
+go mod tidy
 
-# Run the server
+# 開発用サーバーを起動
 go run main.go
 
-# Build the application
+# 開発用のテストデータを投入（データベースをリセット）
+go run cmd/seeder/main.go
+
+# アプリケーションをビルド
 go build -o subscdeck main.go
 
-# Run with environment variables
-COGNITO_USER_POOL_ID=xxx COGNITO_APP_CLIENT_ID=xxx AWS_REGION=ap-northeast-1 go run main.go
+# 環境変数を直接指定して実行する場合の例
+AWS_PROFILE=subscdeck-dev go run main.go
 ```
 
-## Architecture
+## アーキテクチャ
 
-The application implements:
-- Public endpoint at `/` - accessible without authentication
-- Login endpoint at `/login` - accepts username/password and returns JWT tokens
-- Protected endpoint at `/protected` - requires valid Cognito JWT access token
-- Custom middleware for JWT validation using JWKS from Cognito
-- JWKS caching (1 hour) to reduce API calls to Cognito
+アプリケーションは `internal` ディレクトリ以下に主要なロジックが集約されています。
 
-## Key Implementation Details
+- `internal/database`: データベースの初期化、接続、およびデータ操作（CRUD）を担当します。
+- `internal/handler`: HTTPリクエストを受け取り、レスポンスを返すハンドラ関数を定義します。
+- `internal/middleware`: 認証処理など、HTTPリクエストに対するミドルウェアを定義します。
+- `internal/model`: アプリケーションで利用するデータ構造（モデル）を定義します。
+- `internal/seeder`: 開発用のテストデータを生成するためのロジックを担当します。
 
-- Uses AWS SDK v2 for Cognito authentication (InitiateAuth API)
-- JWT validation fetches public keys from Cognito's JWKS endpoint
-- Only accepts access tokens (not ID tokens) for API access
-- Validates token issuer against expected Cognito user pool
-- Uses environment variables for configuration (COGNITO_USER_POOL_ID, COGNITO_APP_CLIENT_ID, AWS_REGION)
+## 主要な実装詳細
+
+- **認証**: ユーザーのサインアップ、ログイン処理はAWS Cognito SDKを利用して行われます。APIへのアクセス制御は、Cognitoが発行するJWT（アクセストークン）を検証するカスタムミドルウェア (`internal/middleware/auth.go`) によって実現されています。
+- **公開鍵の取得**: JWTの署名検証に使用する公開鍵は、CognitoのJWKSエンドポイントから取得します。
+- **設定**: AWSの認証情報やCognitoのプールIDといった設定値は、`.env.local` または `.env` ファイルから読み込まれます。これらのファイルが存在しない場合は、環境変数が利用されます。
