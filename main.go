@@ -38,19 +38,7 @@ func main() {
 	}
 	defer database.Close()
 
-	// Seed sample data in development environment
-	if os.Getenv("ENVIRONMENT") == "development" {
-		// Use the known test user ID for user "test001"
-		testUserID := "77448a08-9001-70cf-ba00-98f2b665608b"
-		log.Println("Running sample data insert for development environment...")
-		log.Printf("Creating sample data for user test001 (ID: %s)", testUserID)
-		err := database.InsertDevelopmentSampleData(testUserID)
-		if err != nil {
-			log.Printf("Warning: Failed to insert sample data: %v", err)
-		} else {
-			log.Println("Sample data inserted successfully for test001 user")
-		}
-	}
+	
 
 	// Initialize AWS Cognito client
 	ctx := context.Background()
