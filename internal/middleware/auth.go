@@ -61,13 +61,15 @@ func CognitoAuthMiddleware() echo.MiddlewareFunc {
 			if authHeader != "" {
 				tokenString = strings.TrimPrefix(authHeader, "Bearer ")
 				if tokenString == authHeader {
-					return echo.NewHTTPError(http.StatusUnauthorized, "Invalid authorization header format")
+					// Redirect to login for invalid authorization header format
+					return c.Redirect(http.StatusFound, "/login")
 				}
 			} else {
 				// Try cookie if no Authorization header
 				cookie, err := c.Cookie("access_token")
 				if err != nil {
-					return echo.NewHTTPError(http.StatusUnauthorized, "Missing authorization token")
+					// Redirect to login if no token is found
+					return c.Redirect(http.StatusFound, "/login")
 				}
 				tokenString = cookie.Value
 			}
@@ -75,7 +77,8 @@ func CognitoAuthMiddleware() echo.MiddlewareFunc {
 			// Verify token
 			token, err := verifyToken(tokenString, userPoolID, region)
 			if err != nil {
-				return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
+				// Redirect to login if token verification fails
+				return c.Redirect(http.StatusFound, "/login")
 			}
 
 			// Store claims in context
