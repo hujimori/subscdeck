@@ -1,10 +1,8 @@
-module subscdeck
+module github.com/Yusuke-Godai/subscdeck
 
 go 1.22
 
 toolchain go1.24.2
-
-replace subscdeck => ./
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.5
