@@ -78,7 +78,7 @@ func GetDB() *sql.DB {
 func GetAllSubscriptions(userID string) ([]model.Subscription, error) {
 	// Debug log to check database query
 	log.Printf("GetAllSubscriptions: Querying for userID: %s", userID)
-	
+
 	// First, let's see all subscriptions in the database for debugging
 	debugRows, debugErr := db.Query("SELECT id, service_name, COALESCE(user_id, '') as user_id FROM subscriptions ORDER BY created_at DESC")
 	if debugErr == nil {
@@ -91,7 +91,7 @@ func GetAllSubscriptions(userID string) ([]model.Subscription, error) {
 		}
 		debugRows.Close()
 	}
-	
+
 	rows, err := db.Query("SELECT id, service_name, price, COALESCE(usage_unit, '') as usage_unit, COALESCE(user_id, '') as user_id, created_at FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC", userID)
 	if err != nil {
 		log.Printf("GetAllSubscriptions: Database query error: %v", err)
@@ -112,7 +112,7 @@ func GetAllSubscriptions(userID string) ([]model.Subscription, error) {
 		subscriptions = append(subscriptions, sub)
 		log.Printf("GetAllSubscriptions: Found subscription ID %d for userID %s, service: %s", id, sub.UserID, sub.ServiceName)
 	}
-	
+
 	log.Printf("GetAllSubscriptions: Found %d subscriptions for userID: %s", len(subscriptions), userID)
 	return subscriptions, rows.Err()
 }
@@ -146,14 +146,14 @@ func CreateSubscription(serviceName string, price int, usageUnit string, userID 
 // GetSubscriptionByID retrieves a single subscription by ID for a specific user
 func GetSubscriptionByID(id string, userID string) (*model.Subscription, error) {
 	row := db.QueryRow("SELECT id, service_name, price, COALESCE(usage_unit, '') as usage_unit, COALESCE(user_id, '') as user_id, created_at FROM subscriptions WHERE id = ? AND user_id = ?", id, userID)
-	
+
 	var sub model.Subscription
 	var dbID int
 	err := row.Scan(&dbID, &sub.ServiceName, &sub.Price, &sub.UsageUnit, &sub.UserID, &sub.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	sub.ID = strconv.Itoa(dbID)
 	return &sub, nil
 }
@@ -167,7 +167,7 @@ func UpdateSubscription(id, serviceName string, price int, usageUnit string, use
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Return the updated subscription
 	return GetSubscriptionByID(id, userID)
 }
@@ -206,11 +206,11 @@ func GetMonthlyUsageCount(subscriptionID int, userID string) (int, error) {
 		"SELECT COUNT(*) FROM subscription_usage_logs WHERE subscription_id = ? AND user_id = ? AND created_at >= ? AND created_at <= ?",
 		subscriptionID, userID, firstDayOfMonth, lastDayOfMonth,
 	).Scan(&count)
-	
+
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return count, nil
 }
 
@@ -224,11 +224,11 @@ func GetMonthlyUsageCountByMonth(subscriptionID int, userID string, year int, mo
 		"SELECT COUNT(*) FROM subscription_usage_logs WHERE subscription_id = ? AND user_id = ? AND created_at >= ? AND created_at <= ?",
 		subscriptionID, userID, firstDayOfMonth, lastDayOfMonth,
 	).Scan(&count)
-	
+
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return count, nil
 }
 
@@ -274,19 +274,19 @@ func GetTestUserID() (string, error) {
 		ORDER BY created_at DESC 
 		LIMIT 1
 	`).Scan(&userID)
-	
+
 	if err == sql.ErrNoRows {
 		return "", nil // No test user found
 	}
 	if err != nil {
 		return "", err
 	}
-	
+
 	return userID, nil
 }
 
 // SeedDataForTestUser creates test data for the test user
-func SeedDataForTestUser(testUserID string) error {
+func InsertDevelopmentSampleData(testUserID string) error {
 	if testUserID == "" {
 		log.Printf("No test user ID provided, skipping seed data")
 		return nil
@@ -346,7 +346,7 @@ func SeedDataForTestUser(testUserID string) error {
 	// Generate random usage logs for the past 3 months
 	// Create a weighted distribution for different days
 	rand.Seed(time.Now().UnixNano())
-	
+
 	for i, subID := range subscriptionIDs {
 		// Different usage patterns for different services
 		var avgUsagePerMonth int
@@ -357,10 +357,10 @@ func SeedDataForTestUser(testUserID string) error {
 		}
 
 		// Generate usage for past 3 months
-		for month := 0; month < 3; month++ {
+		for month := 0; month < 12; month++ {
 			monthDate := now.AddDate(0, -month, 0)
 			daysInMonth := time.Date(monthDate.Year(), monthDate.Month()+1, 0, 0, 0, 0, 0, monthDate.Location()).Day()
-			
+
 			// Random usage count for this month (±30% variation)
 			variation := rand.Intn(int(float64(avgUsagePerMonth)*0.6)) - int(float64(avgUsagePerMonth)*0.3)
 			usageCount := avgUsagePerMonth + variation
@@ -372,9 +372,9 @@ func SeedDataForTestUser(testUserID string) error {
 			for j := 0; j < usageCount; j++ {
 				// Random day of month
 				day := rand.Intn(daysInMonth) + 1
-				usageDate := time.Date(monthDate.Year(), monthDate.Month(), day, 
+				usageDate := time.Date(monthDate.Year(), monthDate.Month(), day,
 					rand.Intn(24), rand.Intn(60), rand.Intn(60), 0, monthDate.Location())
-				
+
 				// Increase probability for certain days (Friday, Saturday)
 				weekday := usageDate.Weekday()
 				if weekday == time.Friday || weekday == time.Saturday {
@@ -400,7 +400,7 @@ func SeedDataForTestUser(testUserID string) error {
 					return err
 				}
 			}
-			log.Printf("Created %d usage logs for subscription ID %d in %s", 
+			log.Printf("Created %d usage logs for subscription ID %d in %s",
 				usageCount, subID, monthDate.Format("2006-01"))
 		}
 	}
@@ -420,5 +420,177 @@ func Close() error {
 	if db != nil {
 		return db.Close()
 	}
+	return nil
+}
+
+// initializeTestData creates sample subscriptions and usage data
+func initializeTestData() error {
+	// Check if there are any existing subscriptions
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM subscriptions").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	// Only initialize if database is empty
+	if count > 0 {
+		return nil
+	}
+
+	log.Println("Initializing test data...")
+
+	// Default test user ID
+	testUserID := "test-user-123"
+
+	// Create sample subscriptions
+	subscriptions := []struct {
+		name      string
+		price     int
+		usageUnit string
+	}{
+		{"Netflix", 1490, "作品"},
+		{"Spotify", 980, "曲"},
+		{"Amazon Prime", 500, "回"},
+		{"YouTube Premium", 1180, "動画"},
+		{"Apple Music", 1080, "曲"},
+	}
+
+	for _, sub := range subscriptions {
+		result, err := db.Exec(
+			"INSERT INTO subscriptions (service_name, price, usage_unit, user_id, created_at) VALUES (?, ?, ?, ?, ?)",
+			sub.name, sub.price, sub.usageUnit, testUserID, time.Now(),
+		)
+		if err != nil {
+			log.Printf("Failed to insert subscription %s: %v", sub.name, err)
+			continue
+		}
+
+		subscriptionID, err := result.LastInsertId()
+		if err != nil {
+			continue
+		}
+
+		// Generate usage logs for the past year
+		generateUsageLogsForSubscription(int(subscriptionID), testUserID, sub.name)
+	}
+
+	log.Println("Test data initialization completed")
+	return nil
+}
+
+// generateUsageLogsForSubscription creates random usage logs for a subscription
+func generateUsageLogsForSubscription(subscriptionID int, userID string, serviceName string) {
+	endDate := time.Now()
+	startDate := endDate.AddDate(-1, 0, 0)
+
+	// Service-specific usage patterns
+	usagePatterns := map[string]struct {
+		weekdayProb float64
+		weekendProb float64
+		dailyUsage  [2]int // min, max usage per day
+	}{
+		"Netflix":         {0.3, 0.6, [2]int{1, 3}},  // More usage on weekends
+		"Spotify":         {0.7, 0.4, [2]int{5, 20}}, // More usage on weekdays, many songs
+		"Amazon Prime":    {0.2, 0.3, [2]int{1, 2}},  // Moderate usage
+		"YouTube Premium": {0.5, 0.5, [2]int{3, 10}}, // Consistent usage
+		"Apple Music":     {0.6, 0.3, [2]int{4, 15}}, // Similar to Spotify
+	}
+
+	pattern, exists := usagePatterns[serviceName]
+	if !exists {
+		// Default pattern
+		pattern = usagePatterns["Amazon Prime"]
+	}
+
+	insertCount := 0
+	for d := startDate; d.Before(endDate); d = d.AddDate(0, 0, 1) {
+		weekday := d.Weekday()
+		usageProbability := pattern.weekdayProb
+
+		if weekday == time.Saturday || weekday == time.Sunday {
+			usageProbability = pattern.weekendProb
+		}
+
+		// Seasonal variation
+		month := d.Month()
+		if month >= time.June && month <= time.August {
+			usageProbability += 0.1 // Summer increase
+		} else if month == time.December || month == time.January {
+			usageProbability += 0.15 // Holiday season increase
+		}
+
+		// Random decision to use service on this day
+		if rand.Float64() < usageProbability {
+			// Random number of uses within the pattern range
+			minUsage := pattern.dailyUsage[0]
+			maxUsage := pattern.dailyUsage[1]
+			usageCount := rand.Intn(maxUsage-minUsage+1) + minUsage
+
+			// Distribute usage throughout the day
+			for i := 0; i < usageCount; i++ {
+				hour := 6 + rand.Intn(18) // Between 6 AM and midnight
+				minute := rand.Intn(60)
+				second := rand.Intn(60)
+
+				timestamp := time.Date(d.Year(), d.Month(), d.Day(), hour, minute, second, 0, d.Location())
+
+				_, err := db.Exec(
+					"INSERT INTO subscription_usage_logs (subscription_id, user_id, created_at) VALUES (?, ?, ?)",
+					subscriptionID, userID, timestamp,
+				)
+				if err != nil {
+					log.Printf("Failed to insert usage log: %v", err)
+					continue
+				}
+				insertCount++
+			}
+		}
+	}
+
+	log.Printf("Generated %d usage logs for %s", insertCount, serviceName)
+}
+
+// TransferTestDataToUser transfers test data from the default test user to an actual user
+func TransferTestDataToUser(actualUserID string) error {
+	testUserID := "test-user-123"
+
+	// Check if the actual user already has subscriptions
+	var userSubCount int
+	err := db.QueryRow("SELECT COUNT(*) FROM subscriptions WHERE user_id = ?", actualUserID).Scan(&userSubCount)
+	if err != nil {
+		return err
+	}
+
+	// If user already has subscriptions, don't transfer
+	if userSubCount > 0 {
+		return nil
+	}
+
+	// Check if test data exists
+	var testSubCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM subscriptions WHERE user_id = ?", testUserID).Scan(&testSubCount)
+	if err != nil {
+		return err
+	}
+
+	if testSubCount == 0 {
+		return nil // No test data to transfer
+	}
+
+	log.Printf("Transferring test data from %s to %s", testUserID, actualUserID)
+
+	// Transfer subscriptions
+	_, err = db.Exec("UPDATE subscriptions SET user_id = ? WHERE user_id = ?", actualUserID, testUserID)
+	if err != nil {
+		return err
+	}
+
+	// Transfer usage logs
+	_, err = db.Exec("UPDATE subscription_usage_logs SET user_id = ? WHERE user_id = ?", actualUserID, testUserID)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Successfully transferred test data to user: %s", actualUserID)
 	return nil
 }
