@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 
-	"subscdeck/internal/database"
-	"subscdeck/internal/handler"
-	"subscdeck/internal/middleware"
+	"github.com/hujimori/subscdeck/internal/database"
+	"github.com/hujimori/subscdeck/internal/handler"
+	"github.com/hujimori/subscdeck/internal/middleware"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"

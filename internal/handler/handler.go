@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"subscdeck/internal/database"
-	"subscdeck/internal/middleware"
-	"subscdeck/internal/model"
+	"github.com/hujimori/subscdeck/internal/database"
+	"github.com/hujimori/subscdeck/internal/middleware"
+	"github.com/hujimori/subscdeck/internal/model"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"

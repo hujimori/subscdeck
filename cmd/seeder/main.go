@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/Yusuke-Godai/subscdeck/internal/database"
-	"github.com/Yusuke-Godai/subscdeck/internal/seeder"
+	"github.com/hujimori/subscdeck/internal/database"
+	"github.com/hujimori/subscdeck/internal/seeder"
 	"github.com/joho/godotenv"
 )
 

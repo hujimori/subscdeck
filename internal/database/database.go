@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"subscdeck/internal/model"
+	"github.com/hujimori/subscdeck/internal/model"
 
 	_ "github.com/mattn/go-sqlite3"
 )
