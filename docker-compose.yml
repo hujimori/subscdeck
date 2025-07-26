@@ -1,0 +1,13 @@
+services:
+  subscdeck:
+    image: subscdeck:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ~/subscdeck-data:/data
+      - ~/.aws:/home/appuser/.aws:ro
+    environment:
+      - DB_PATH=/data/subscdeck.db
+      - AWS_PROFILE=subscdeck-dev
+    env_file:
+      - .env.local

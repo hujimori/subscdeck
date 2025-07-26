@@ -38,6 +38,9 @@ RUN mkdir -p /data && chown appuser:appgroup /data
 # Copy the binary from builder
 COPY --from=builder /app/main .
 
+# Copy web templates
+COPY --from=builder /app/web ./web
+
 # Set ownership
 RUN chown -R appuser:appgroup /app
 
