@@ -32,7 +32,11 @@ func main() {
 	fmt.Println("COGNITO_USER_POOL_ID:", userPoolID)
 
 	// Initialize SQLite database
-	err = database.InitDB("subscdeck.db")
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "subscdeck.db"
+	}
+	err = database.InitDB(dbPath)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
