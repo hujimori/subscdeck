@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubscDeck - サブスクリプション管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            display: flex;
+            gap: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+        }
+        .main-container {
+            flex: 1;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        .form-section h2 {
+            margin-top: 0;
+            color: #555;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 12px 24px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            padding: 8px 16px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+        .edit-btn {
+            background-color: #007bff;
+            padding: 8px 16px;
+            font-size: 14px;
+            margin-left: 10px;
+            text-decoration: none;
+            color: white;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .edit-btn:hover {
+            background-color: #0056b3;
+            text-decoration: none;
+            color: white;
+        }
+        .subscription-list {
+            margin-top: 30px;
+        }
+        .subscription-list h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .subscription-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        .subscription-item:hover {
+            background-color: #e9ecef;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .subscription-info {
+            flex: 1;
+        }
+        .subscription-name {
+            font-weight: bold;
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .subscription-price {
+            color: #dc3545;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .subscription-date {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .subscription-usage {
+            color: #28a745;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .total-section {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #e7f3ff;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            text-align: right;
+        }
+        .total-label {
+            font-size: 18px;
+            color: #333;
+            margin-right: 10px;
+        }
+        .total-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #dc3545;
+        }
+        .usage-input {
+            width: 80px;
+            padding: 6px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-left: 10px;
+            text-align: center;
+        }
+        .usage-input:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        .usage-btn {
+            background-color: #28a745;
+            padding: 8px 12px;
+            font-size: 14px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+        .usage-btn:hover {
+            background-color: #218838;
+        }
+        .graph-btn {
+            background-color: #007bff;
+            padding: 8px 12px;
+            font-size: 14px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+        .graph-btn:hover {
+            background-color: #0056b3;
+        }
+        .graph-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        .graph-container canvas {
+            max-width: 100%;
+            height: 400px;
+        }
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+        .logout-btn {
+            background-color: #6c757d;
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .logout-btn:hover {
+            background-color: #545b62;
+        }
+        
+        /* サイドバーのスタイル */
+        .sidebar {
+            width: 400px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            height: fit-content;
+            display: none;
+            position: sticky;
+            top: 20px;
+        }
+        .sidebar.visible {
+            display: block;
+        }
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+        .close-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .close-btn:hover {
+            background: #545b62;
+        }
+        
+        /* ヒートマップのスタイル */
+        .heatmap-section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .heatmap-container {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            position: relative;
+        }
+        .heatmap-month {
+            margin-bottom: 20px;
+        }
+        .month-label {
+            font-weight: bold;
+            font-size: 14px;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        .heatmap-calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            font-size: 12px;
+        }
+        .heatmap-day {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            background: #f1f3f4;
+            color: #5f6368;
+            font-size: 11px;
+        }
+        .heatmap-day.has-usage {
+            background: #28a745;
+            color: white;
+        }
+        .heatmap-day.usage-1 {
+            background: #c6f7d0;
+            color: #155724;
+        }
+        .heatmap-day.usage-2 {
+            background: #9be7a8;
+            color: #155724;
+        }
+        .heatmap-day.usage-3 {
+            background: #68d391;
+            color: #155724;
+        }
+        .heatmap-day.usage-4 {
+            background: #38a169;
+            color: white;
+        }
+        .heatmap-day.usage-high {
+            background: #2f7d32;
+            color: white;
+        }
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 10px;
+            font-size: 11px;
+            color: #6c757d;
+        }
+        
+        /* ページネーションのスタイル */
+        .pagination-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f1f3f4;
+            border-radius: 6px;
+        }
+        .pagination-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.3s;
+        }
+        .pagination-btn:hover:not(:disabled) {
+            background: #0056b3;
+        }
+        .pagination-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .pagination-info {
+            font-size: 13px;
+            color: #495057;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        /* 統計サマリーのスタイル */
+        .stats-section {
+            margin-bottom: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            gap: 15px;
+        }
+        .stat-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .stat-label {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .stat-change {
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .stat-change.positive {
+            color: #28a745;
+        }
+        .stat-change.negative {
+            color: #dc3545;
+        }
+        .weekday-stats {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .weekday-item {
+            text-align: center;
+            padding: 8px 4px;
+            background: #f1f3f4;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        .weekday-item.popular {
+            background: #007bff;
+            color: white;
+        }
+        .weekday-label {
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+        .weekday-count {
+            font-weight: bold;
+        }
+        
+        /* ツールチップのスタイル */
+        .tooltip {
+            position: fixed;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .tooltip::before {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid rgba(0, 0, 0, 0.9);
+        }
+        .tooltip-date {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .tooltip-count {
+            color: #81e6d9;
+        }
+        
+        /* グラフ関連のスタイル */
+        .graph-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .graph-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .period-selector {
+            display: flex;
+            gap: 8px;
+        }
+        .period-btn {
+            padding: 8px 16px;
+            border: 1px solid #dee2e6;
+            background: #f8f9fa;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            color: #6c757d;
+        }
+        .period-btn:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+            color: #495057;
+        }
+        .period-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+            box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+        }
+        .graph-container {
+            padding: 20px;
+        }
+        #usageChart {
+            display: block;
+            height: 400px !important;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.min.js"></script>
+</head>
+<body>
+    <div class="main-container">
+        <div class="container">
+        <div class="header-container">
+            <h1>SubscDeck</h1>
+            {{ if .IsLoggedIn }}
+            <form id="logoutForm" action="/logout" method="POST" style="margin: 0;">
+                <button type="submit" class="logout-btn">ログアウト</button>
+            </form>
+            {{ end }}
+        </div>
+        {{ if .IsLoggedIn }}
+        <div class="form-section">
+            <h2>新規サブスクリプション登録</h2>
+            <form id="subscriptionForm">
+                <div class="form-group">
+                    <label for="service_name">サービス名:</label>
+                    <input type="text" id="service_name" name="service_name" required placeholder="例: Netflix, Spotify">
+                </div>
+                <div class="form-group">
+                    <label for="price">月額料金 (円):</label>
+                    <input type="number" id="price" name="price" required placeholder="例: 1490">
+                </div>
+                <div class="form-group">
+                    <label for="usage_unit">利用単位:</label>
+                    <input type="text" id="usage_unit" name="usage_unit" placeholder="例: 回, 時間, 本, 曲">
+                </div>
+                <button type="submit">登録</button>
+            </form>
+        </div>
+        {{ else }}
+        <div class="form-section">
+            <h2>ログインが必要です</h2>
+            <p>サブスクリプションの登録・削除をするには<a href="/">ログイン</a>してください。</p>
+        </div>
+        {{ end }}
+
+        <div class="subscription-list">
+            <h2>登録済みサブスクリプション</h2>
+            <div id="subscriptionList"></div>
+            <div class="total-section">
+                <span class="total-label">月額合計:</span>
+                <span class="total-amount" id="totalAmount">¥0</span>
+            </div>
+        </div>
+        
+        <div id="graphContainer" class="graph-container">
+            <div class="graph-header">
+                <h2 id="graphTitle">利用単価の推移</h2>
+                <div class="period-selector">
+                    <button type="button" id="btn-3m" class="period-btn active">3ヶ月</button>
+                    <button type="button" id="btn-6m" class="period-btn">6ヶ月</button>
+                    <button type="button" id="btn-12m" class="period-btn">12ヶ月</button>
+                </div>
+            </div>
+            <canvas id="usageChart"></canvas>
+            <div style="margin-top: 15px; text-align: center;">
+                <button type="button" onclick="resetZoom()" style="margin-right: 10px; padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">表示をリセット</button>
+                <button type="button" onclick="hideGraph()" style="padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">閉じる</button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- サイドバー -->
+    <div class="sidebar" id="usageSidebar">
+        <div class="sidebar-header">
+            <h3 class="sidebar-title" id="sidebarTitle">利用履歴</h3>
+            <button class="close-btn" onclick="closeSidebar()">閉じる</button>
+        </div>
+        
+        <div class="stats-section">
+            <div class="section-title">📊 統計サマリー</div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">今月の利用回数</div>
+                    <div class="stat-value" id="thisMonthCount">-</div>
+                    <span class="stat-change" id="monthComparison"></span>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">最も利用の多い曜日</div>
+                    <div class="stat-value" id="mostPopularWeekday">-</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <div class="stat-label">曜日別利用回数</div>
+                <div class="weekday-stats" id="weekdayStats"></div>
+            </div>
+        </div>
+        
+        <div class="heatmap-section">
+            <div class="section-title">📅 利用履歴ヒートマップ</div>
+            <div class="pagination-controls">
+                <button class="pagination-btn" id="prevBtn" onclick="previousPage()">← 前の3ヶ月</button>
+                <span class="pagination-info" id="paginationInfo">-</span>
+                <button class="pagination-btn" id="nextBtn" onclick="nextPage()">次の3ヶ月 →</button>
+            </div>
+            <div class="heatmap-container" id="heatmapContainer">
+                <div id="heatmapContent">読み込み中...</div>
+                <div class="heatmap-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f1f3f4;"></div>
+                        <span>利用なし</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #c6f7d0;"></div>
+                        <span>1回</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #9be7a8;"></div>
+                        <span>2回</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #68d391;"></div>
+                        <span>3回</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #38a169;"></div>
+                        <span>4回</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2f7d32;"></div>
+                        <span>5回以上</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ツールチップ -->
+    <div class="tooltip" id="heatmapTooltip">
+        <div class="tooltip-date" id="tooltipDate"></div>
+        <div class="tooltip-count">利用回数: <span id="tooltipCount"></span>回</div>
+    </div>
+
+    <script>
+        // ログイン状態をサーバーから取得
+        const isLoggedIn = {{ .IsLoggedIn }};
+        
+        // 古いローカルストレージのトークンを削除（クッキーベースに移行）
+        localStorage.removeItem('accessToken');
+
+        // サブスクリプションデータを格納する配列
+        let subscriptions = [];
+
+        // サブスクリプション一覧を取得する関数
+        async function fetchSubscriptions() {
+            try {
+                const response = await fetch('/api/subscriptions');
+                
+                // レスポンスのContent-Typeを確認
+                const contentType = response.headers.get('content-type');
+                console.log('Response status:', response.status);
+                console.log('Content-Type:', contentType);
+                
+                if (response.status === 401) {
+                    // ログインが必要
+                    alert('ログインが必要です');
+                    window.location.href = '/';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    console.error('Failed to fetch subscriptions:', response.status);
+                    alert('サブスクリプションの取得に失敗しました');
+                    return;
+                }
+                
+                // JSONレスポンスかどうかを確認
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    // nullの場合は空配列として扱う
+                    subscriptions = data ? data.map(sub => ({
+                        ...sub,
+                        created_at: new Date(sub.created_at)
+                    })) : [];
+                    
+                    // 画面を更新
+                    displaySubscriptions();
+                } else {
+                    // HTMLレスポンス（リダイレクトなど）の場合
+                    console.error('Unexpected response type:', contentType);
+                    const text = await response.text();
+                    console.log('Response body:', text.substring(0, 200));
+                    alert('予期しないレスポンスが返されました');
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error fetching subscriptions:', error);
+                alert('ネットワークエラーが発生しました');
+            }
+        }
+
+        // サブスクリプション一覧を表示
+        function displaySubscriptions() {
+            const listContainer = document.getElementById('subscriptionList');
+            listContainer.innerHTML = '';
+            let total = 0;
+
+            subscriptions.forEach(sub => {
+                const item = document.createElement('div');
+                item.className = 'subscription-item';
+                
+                const createdDate = new Date(sub.created_at).toLocaleDateString('ja-JP');
+                
+                item.innerHTML = `
+                    <div class="subscription-info" onclick="showUsageDetails('${sub.id}', '${sub.service_name}')" style="cursor: pointer;">
+                        <div class="subscription-name">${sub.service_name}</div>
+                        <div class="subscription-date">登録日: ${createdDate}</div>
+                        <div class="subscription-usage">今月の利用: ${sub.monthly_usage_count}${sub.usage_unit || '回'}</div>
+                    </div>
+                    <div class="subscription-price">¥${sub.price.toLocaleString()}</div>
+                    {{ if .IsLoggedIn }}
+                        <input type="number" class="usage-input" id="usage-${sub.id}" value="${sub.usage_count || 0}" min="0" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
+                        <button type="button" class="usage-btn" onclick="event.stopPropagation(); updateUsageCount('${sub.id}')">更新</button>
+                        <button type="button" class="graph-btn" onclick="event.stopPropagation(); showGraph('${sub.id}', '${sub.service_name}')">グラフ</button>
+                        <a href="/subscriptions/edit?id=${sub.id}" class="edit-btn" onclick="event.stopPropagation()">編集</a>
+                        <button type="button" class="delete-btn" onclick="event.stopPropagation(); deleteSubscription('${sub.id}')">削除</button>
+                    {{ end }}
+                `;
+                
+                listContainer.appendChild(item);
+                total += sub.price;
+            });
+
+            // 合計金額を更新
+            document.getElementById('totalAmount').textContent = '¥' + total.toLocaleString();
+        }
+
+        // フォーム送信処理 - フォームが存在する場合のみ
+        const subscriptionForm = document.getElementById('subscriptionForm');
+        if (subscriptionForm) {
+            subscriptionForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const serviceName = document.getElementById('service_name').value;
+            const price = parseInt(document.getElementById('price').value);
+            const usageUnit = document.getElementById('usage_unit').value;
+            if (!isLoggedIn) {
+                alert('ログインが必要です');
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/subscriptions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        service_name: serviceName,
+                        price: price,
+                        usage_unit: usageUnit
+                    })
+                });
+                
+                if (response.ok) {
+                    const newSub = await response.json();
+                    
+                    // 新しいサブスクリプションを追加
+                    subscriptions.unshift({
+                        id: newSub.id,
+                        service_name: newSub.service_name,
+                        price: newSub.price,
+                        created_at: new Date(newSub.created_at)
+                    });
+                    
+                    // フォームをクリア
+                    subscriptionForm.reset();
+                    
+                    // 一覧を再表示
+                    displaySubscriptions();
+                } else if (response.status === 401) {
+                    alert('認証エラー: ログインし直してください');
+                    window.location.href = '/';
+                } else {
+                    const error = await response.json();
+                    alert('エラー: ' + (error.message || 'サブスクリプションの登録に失敗しました'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('ネットワークエラーが発生しました');
+            }
+            });
+        }
+
+        // 利用回数を更新する関数
+        async function updateUsageCount(subscriptionId) {
+            const input = document.getElementById(`usage-${subscriptionId}`);
+            const newCount = parseInt(input.value) || 0;
+            
+            if (newCount < 0) {
+                alert('利用回数は0以上の数値を入力してください');
+                return;
+            }
+            if (!isLoggedIn) {
+                alert('ログインが必要です');
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/usage_logs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        subscription_id: parseInt(subscriptionId),
+                        usage_count: newCount
+                    })
+                });
+                
+                if (response.ok) {
+                    const usageLog = await response.json();
+                    // 成功メッセージを表示
+                    const subName = subscriptions.find(sub => sub.id === subscriptionId)?.service_name || 'サブスクリプション';
+                    alert(`${subName}の利用回数を${newCount}回に更新しました！`);
+                    // サブスクリプションリストを再取得して最新の利用回数を表示
+                    fetchSubscriptions();
+                } else if (response.status === 401) {
+                    alert('認証エラー: ログインし直してください');
+                    window.location.href = '/';
+                } else {
+                    const error = await response.json();
+                    alert('エラー: ' + (error.message || '利用回数の更新に失敗しました'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('ネットワークエラーが発生しました');
+            }
+        }
+
+        // 削除関数
+        async function deleteSubscription(id) {
+            if (!confirm('このサブスクリプションを削除しますか？')) {
+                return;
+            }
+            
+            if (!isLoggedIn) {
+                alert('ログインが必要です');
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('id', id);
+                
+                const response = await fetch('/subscriptions/delete', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    // 削除成功 - ローカルのデータからも削除
+                    const index = subscriptions.findIndex(sub => sub.id === id);
+                    if (index > -1) {
+                        subscriptions.splice(index, 1);
+                    }
+                    // 画面を再表示
+                    displaySubscriptions();
+                } else if (response.status === 401) {
+                    alert('認証エラー: ログインし直してください');
+                    window.location.href = '/';
+                } else {
+                    const error = await response.text();
+                    alert('エラー: ' + error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('ネットワークエラーが発生しました');
+            }
+        }
+
+        // グラフ表示関数
+        let currentChart = null;
+        let currentPeriod = 3;
+        let currentSubscriptionId = null;
+        let currentServiceName = '';
+        let allUsageData = []; // 全期間データを保持
+        
+        async function showGraph(subscriptionId, serviceName) {
+            currentSubscriptionId = subscriptionId;
+            currentServiceName = serviceName;
+            
+            // デフォルトで3ヶ月を選択
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes('3')) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            currentPeriod = 3;
+            
+            // 全期間データを一度だけ取得
+            await loadAllUsageData();
+            
+            // 初期表示は3ヶ月範囲で描画
+            drawGraphWithRange(3);
+        }
+        
+        // 全期間データを一度だけ取得
+        async function loadAllUsageData() {
+            if (!isLoggedIn) {
+                alert('ログインが必要です');
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                // 全データを取得（12ヶ月分または全期間）
+                const response = await fetch(`/api/subscriptions/${currentSubscriptionId}/usage_stats?period=all`);
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('認証エラー: ログインし直してください');
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('データの取得に失敗しました');
+                }
+                
+                allUsageData = await response.json();
+                console.log(`全期間データ取得完了: ${allUsageData.length}件`, allUsageData);
+                
+            } catch (error) {
+                console.error('Error loading all usage data:', error);
+                alert('データの取得に失敗しました');
+                allUsageData = []; // エラー時は空データ
+            }
+        }
+        
+        // 指定期間でグラフを描画
+        function drawGraphWithRange(period) {
+            // グラフタイトルを更新
+            let periodText = period === 12 && allUsageData.length > 12 ? '全期間' : `${period}ヶ月間`;
+            document.getElementById('graphTitle').textContent = `${currentServiceName} - 利用単価の推移 (${periodText})`;
+            
+            // 既存のチャートを破棄
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            
+            // 表示範囲を計算（現在日付ベースで期間に応じて）
+            const now = new Date();
+            const startDate = new Date(now.getFullYear(), now.getMonth() - period + 1, 1);
+            const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const minMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+            const maxMonth = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
+            
+            console.log(`期間: ${period}ヶ月, 表示範囲: ${minMonth} to ${maxMonth}, 全データ: ${allUsageData.length}件`);
+            
+            // Chart.jsでグラフを描画
+            const ctx = document.getElementById('usageChart').getContext('2d');
+            
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allUsageData.map(stat => stat.month), // 全期間データを渡す
+                    datasets: [{
+                        label: '利用単価 (円)',
+                        data: allUsageData.map(stat => stat.cost_per_use), // 全期間データを渡す
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '月別利用単価'
+                        },
+                        tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false
+                        },
+                        zoom: {
+                            pan: {
+                                enabled: true, // パン機能を有効にする
+                                mode: 'x',     // X軸方向（横）にだけパンを許可する
+                            },
+                            zoom: {
+                                wheel: {
+                                    enabled: true, // マウスホイールでのズームを有効にする
+                                },
+                                pinch: {
+                                    enabled: true, // ピンチ操作でのズームを有効にする
+                                },
+                                mode: 'x',     // X軸方向（横）にだけズームを許可する
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '利用単価 (円)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '月'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 0
+                            },
+                            min: minMonth, // 表示範囲の開始
+                            max: maxMonth  // 表示範囲の終了
+                        }
+                    }
+                }
+            });
+            
+            // グラフコンテナを表示
+            document.getElementById('graphContainer').style.display = 'block';
+            
+            // 期間切り替えボタンにイベントリスナーを追加
+            setupPeriodButtons();
+        }
+        
+        
+        function hideGraph() {
+            document.getElementById('graphContainer').style.display = 'none';
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
+            }
+        }
+        
+        function resetZoom() {
+            if (currentChart) {
+                currentChart.resetZoom();
+            }
+        }
+        
+        // 期間切り替えボタンの設定
+        function setupPeriodButtons() {
+            const btn3m = document.getElementById('btn-3m');
+            const btn6m = document.getElementById('btn-6m');
+            const btn12m = document.getElementById('btn-12m');
+            
+            // 既存のイベントリスナーを削除
+            btn3m.replaceWith(btn3m.cloneNode(true));
+            btn6m.replaceWith(btn6m.cloneNode(true));
+            btn12m.replaceWith(btn12m.cloneNode(true));
+            
+            // 新しい要素を取得
+            const newBtn3m = document.getElementById('btn-3m');
+            const newBtn6m = document.getElementById('btn-6m');
+            const newBtn12m = document.getElementById('btn-12m');
+            
+            // 3ヶ月ボタン
+            newBtn3m.addEventListener('click', () => {
+                updateActiveButton(newBtn3m);
+                currentPeriod = 3;
+                updateChartDisplayRange(3);
+            });
+            
+            // 6ヶ月ボタン
+            newBtn6m.addEventListener('click', () => {
+                updateActiveButton(newBtn6m);
+                currentPeriod = 6;
+                updateChartDisplayRange(6);
+            });
+            
+            // 12ヶ月ボタン
+            newBtn12m.addEventListener('click', () => {
+                updateActiveButton(newBtn12m);
+                currentPeriod = 12;
+                updateChartDisplayRange(12);
+            });
+        }
+        
+        // アクティブボタンの更新
+        function updateActiveButton(activeButton) {
+            document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+            activeButton.classList.add('active');
+        }
+        
+        // 表示範囲のみ更新（データは再取得しない）
+        function updateChartDisplayRange(period) {
+            if (!currentChart || allUsageData.length === 0) {
+                return;
+            }
+            
+            // 表示範囲を計算（現在日付ベースで期間に応じて）
+            const now = new Date();
+            const startDate = new Date(now.getFullYear(), now.getMonth() - period + 1, 1);
+            const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const minMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+            const maxMonth = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
+            
+            console.log(`表示範囲更新: ${period}ヶ月, 範囲: ${minMonth} to ${maxMonth}, 全データ: ${allUsageData.length}件`);
+            
+            // グラフタイトルを更新
+            let periodText = period === 12 && allUsageData.length > 12 ? '全期間' : `${period}ヶ月間`;
+            document.getElementById('graphTitle').textContent = `${currentServiceName} - 利用単価の推移 (${periodText})`;
+            
+            // Chart.jsの表示範囲を更新（データはそのまま）
+            currentChart.options.scales.x.min = minMonth;
+            currentChart.options.scales.x.max = maxMonth;
+            
+            // グラフを再描画
+            currentChart.update();
+        }
+
+        // ページネーション用の変数
+        let currentPage = 0;
+        let allUsageLogs = [];
+        let currentSubscriptionName = '';
+
+        // 利用履歴詳細を表示する関数
+        async function showUsageDetails(subscriptionId, serviceName) {
+            if (!isLoggedIn) {
+                alert('ログインが必要です');
+                window.location.href = '/';
+                return;
+            }
+
+            // サイドバーのタイトルを更新
+            currentSubscriptionName = serviceName;
+            document.getElementById('sidebarTitle').textContent = `${serviceName} - 利用履歴`;
+            
+            // ローディング表示
+            document.getElementById('heatmapContent').innerHTML = '読み込み中...';
+            document.getElementById('thisMonthCount').textContent = '-';
+            document.getElementById('mostPopularWeekday').textContent = '-';
+            document.getElementById('monthComparison').textContent = '';
+            
+            // サイドバーを表示
+            document.getElementById('usageSidebar').classList.add('visible');
+
+            try {
+                const response = await fetch(`/api/subscriptions/${subscriptionId}/usage_details`);
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('認証エラー: ログインし直してください');
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('利用履歴の取得に失敗しました');
+                }
+                
+                const data = await response.json();
+                
+                // 統計サマリーを表示
+                displayStats(data);
+                
+                // 全データを保存し、ページをリセット
+                allUsageLogs = data.usage_logs;
+                currentPage = 0;
+                
+                // ヒートマップを生成
+                updateHeatmapWithPagination();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('heatmapContent').innerHTML = 'エラーが発生しました';
+                alert('利用履歴の表示に失敗しました');
+            }
+        }
+
+        // 統計サマリーを表示する関数
+        function displayStats(data) {
+            // 今月の利用回数と比較
+            document.getElementById('thisMonthCount').textContent = data.this_month_count;
+            
+            const comparison = data.month_comparison;
+            const comparisonEl = document.getElementById('monthComparison');
+            
+            if (comparison > 0) {
+                comparisonEl.textContent = `▲${comparison.toFixed(1)}%`;
+                comparisonEl.className = 'stat-change positive';
+            } else if (comparison < 0) {
+                comparisonEl.textContent = `▼${Math.abs(comparison).toFixed(1)}%`;
+                comparisonEl.className = 'stat-change negative';
+            } else {
+                comparisonEl.textContent = '±0%';
+                comparisonEl.className = 'stat-change';
+            }
+            
+            // 最も利用の多い曜日
+            document.getElementById('mostPopularWeekday').textContent = data.most_popular_weekday || '-';
+            
+            // 曜日別統計
+            const weekdayStatsEl = document.getElementById('weekdayStats');
+            weekdayStatsEl.innerHTML = '';
+            
+            data.weekday_stats.forEach(stat => {
+                const item = document.createElement('div');
+                item.className = 'weekday-item';
+                if (stat.weekday === data.most_popular_weekday) {
+                    item.classList.add('popular');
+                }
+                
+                item.innerHTML = `
+                    <div class="weekday-label">${stat.weekday.substring(0, 1)}</div>
+                    <div class="weekday-count">${stat.count}</div>
+                `;
+                
+                weekdayStatsEl.appendChild(item);
+            });
+        }
+
+        // ページネーションを更新する関数
+        function updateHeatmapWithPagination() {
+            // 現在のページの期間を計算
+            const today = new Date();
+            const startMonth = new Date(today.getFullYear(), today.getMonth() - (currentPage + 1) * 3 + 1, 1);
+            const endMonth = new Date(today.getFullYear(), today.getMonth() - currentPage * 3 + 1, 0);
+            
+            // ページネーション情報を更新
+            const startMonthStr = startMonth.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' });
+            const endMonthStr = endMonth.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' });
+            document.getElementById('paginationInfo').textContent = `${startMonthStr} ～ ${endMonthStr}`;
+            
+            // ボタンの有効/無効を設定
+            document.getElementById('nextBtn').disabled = currentPage === 0;
+            
+            // 最古のログより古い期間は表示しない
+            const oldestLog = allUsageLogs.length > 0 ? new Date(allUsageLogs[allUsageLogs.length - 1].created_at) : new Date();
+            document.getElementById('prevBtn').disabled = startMonth < oldestLog;
+            
+            // 期間内のログのみフィルタリング
+            const filteredLogs = allUsageLogs.filter(log => {
+                const logDate = new Date(log.created_at);
+                return logDate >= startMonth && logDate <= endMonth;
+            });
+            
+            // ヒートマップを生成
+            generateHeatmap(filteredLogs, currentPage);
+        }
+
+        // 前のページへ
+        function previousPage() {
+            currentPage++;
+            updateHeatmapWithPagination();
+        }
+
+        // 次のページへ
+        function nextPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                updateHeatmapWithPagination();
+            }
+        }
+
+        // ヒートマップを生成する関数
+        function generateHeatmap(usageLogs, pageOffset = 0) {
+            const heatmapContent = document.getElementById('heatmapContent');
+            heatmapContent.innerHTML = '';
+            
+            // 利用日ごとの回数をカウント
+            const usageByDate = {};
+            usageLogs.forEach(log => {
+                const date = new Date(log.created_at).toDateString();
+                usageByDate[date] = (usageByDate[date] || 0) + 1;
+            });
+            
+            // 3ヶ月のカレンダーを生成
+            const today = new Date();
+            const months = [];
+            
+            for (let i = 2; i >= 0; i--) {
+                const month = new Date(today.getFullYear(), today.getMonth() - pageOffset * 3 - i, 1);
+                months.push(month);
+            }
+            
+            months.forEach(month => {
+                const monthContainer = document.createElement('div');
+                monthContainer.className = 'heatmap-month';
+                
+                const monthLabel = document.createElement('div');
+                monthLabel.className = 'month-label';
+                monthLabel.textContent = month.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' });
+                
+                const calendar = document.createElement('div');
+                calendar.className = 'heatmap-calendar';
+                
+                // 月の最初の日の曜日を取得
+                const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+                const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+                const startDay = firstDay.getDay(); // 0 = 日曜日
+                
+                // 空のセルを追加（月曜日から始まるように調整）
+                const mondayStart = (startDay === 0) ? 6 : startDay - 1;
+                for (let i = 0; i < mondayStart; i++) {
+                    const emptyDay = document.createElement('div');
+                    emptyDay.className = 'heatmap-day';
+                    calendar.appendChild(emptyDay);
+                }
+                
+                // 月の日付を追加
+                for (let day = 1; day <= lastDay.getDate(); day++) {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = 'heatmap-day';
+                    dayEl.textContent = day;
+                    
+                    const dayDate = new Date(month.getFullYear(), month.getMonth(), day);
+                    const dayKey = dayDate.toDateString();
+                    const usageCount = usageByDate[dayKey] || 0;
+                    
+                    // data属性を追加
+                    dayEl.setAttribute('data-date', dayDate.toLocaleDateString('ja-JP', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        weekday: 'short'
+                    }));
+                    dayEl.setAttribute('data-count', usageCount);
+                    
+                    if (usageCount > 0) {
+                        if (usageCount === 1) {
+                            dayEl.classList.add('usage-1');
+                        } else if (usageCount === 2) {
+                            dayEl.classList.add('usage-2');
+                        } else if (usageCount === 3) {
+                            dayEl.classList.add('usage-3');
+                        } else if (usageCount === 4) {
+                            dayEl.classList.add('usage-4');
+                        } else {
+                            dayEl.classList.add('usage-high');
+                        }
+                        
+                        // イベントリスナーを追加
+                        dayEl.addEventListener('mouseover', showTooltip);
+                        dayEl.addEventListener('mouseout', hideTooltip);
+                        dayEl.addEventListener('mousemove', moveTooltip);
+                    }
+                    
+                    calendar.appendChild(dayEl);
+                }
+                
+                monthContainer.appendChild(monthLabel);
+                monthContainer.appendChild(calendar);
+                heatmapContent.appendChild(monthContainer);
+            });
+        }
+
+        // サイドバーを閉じる関数
+        function closeSidebar() {
+            document.getElementById('usageSidebar').classList.remove('visible');
+        }
+
+        // ツールチップを表示する関数
+        function showTooltip(event) {
+            const tooltip = document.getElementById('heatmapTooltip');
+            const date = event.target.getAttribute('data-date');
+            const count = event.target.getAttribute('data-count');
+            
+            document.getElementById('tooltipDate').textContent = date;
+            document.getElementById('tooltipCount').textContent = count;
+            
+            tooltip.style.display = 'block';
+            moveTooltip(event);
+        }
+
+        // ツールチップを移動する関数
+        function moveTooltip(event) {
+            const tooltip = document.getElementById('heatmapTooltip');
+            const target = event.target;
+            const targetRect = target.getBoundingClientRect();
+            
+            // ツールチップの幅と高さを取得（表示状態で取得する必要がある）
+            const tooltipWidth = tooltip.offsetWidth;
+            const tooltipHeight = tooltip.offsetHeight;
+            
+            // ターゲット要素の中央上部に配置
+            const left = targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2);
+            const top = targetRect.top - tooltipHeight - 10;
+            
+            // 画面からはみ出さないように調整
+            const adjustedLeft = Math.max(10, Math.min(left, window.innerWidth - tooltipWidth - 10));
+            const adjustedTop = Math.max(10, top);
+            
+            tooltip.style.left = `${adjustedLeft}px`;
+            tooltip.style.top = `${adjustedTop}px`;
+        }
+
+        // ツールチップを非表示にする関数
+        function hideTooltip() {
+            const tooltip = document.getElementById('heatmapTooltip');
+            tooltip.style.display = 'none';
+        }
+
+        // 初回表示 - APIからデータを取得
+        fetchSubscriptions();
+    </script>
+</body>
+</html>
