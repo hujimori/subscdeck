@@ -156,6 +156,20 @@
             font-weight: bold;
             color: #dc3545;
         }
+        .usage-input {
+            width: 80px;
+            padding: 6px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-left: 10px;
+            text-align: center;
+        }
+        .usage-input:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
         .usage-btn {
             background-color: #28a745;
             padding: 8px 12px;
@@ -735,7 +749,8 @@
                     </div>
                     <div class="subscription-price">¥${sub.price.toLocaleString()}</div>
                     {{ if .IsLoggedIn }}
-                        <button type="button" class="usage-btn" onclick="event.stopPropagation(); addUsageLog('${sub.id}')">+1${sub.usage_unit || ''}</button>
+                        <input type="number" class="usage-input" id="usage-${sub.id}" value="${sub.usage_count || 0}" min="0" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
+                        <button type="button" class="usage-btn" onclick="event.stopPropagation(); updateUsageCount('${sub.id}')">更新</button>
                         <button type="button" class="graph-btn" onclick="event.stopPropagation(); showGraph('${sub.id}', '${sub.service_name}')">グラフ</button>
                         <a href="/subscriptions/edit?id=${sub.id}" class="edit-btn" onclick="event.stopPropagation()">編集</a>
                         <button type="button" class="delete-btn" onclick="event.stopPropagation(); deleteSubscription('${sub.id}')">削除</button>
@@ -808,8 +823,15 @@
             });
         }
 
-        // 利用ログを追加する関数
-        async function addUsageLog(subscriptionId) {
+        // 利用回数を更新する関数
+        async function updateUsageCount(subscriptionId) {
+            const input = document.getElementById(`usage-${subscriptionId}`);
+            const newCount = parseInt(input.value) || 0;
+            
+            if (newCount < 0) {
+                alert('利用回数は0以上の数値を入力してください');
+                return;
+            }
             if (!isLoggedIn) {
                 alert('ログインが必要です');
                 window.location.href = '/';
@@ -823,7 +845,8 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        subscription_id: parseInt(subscriptionId)
+                        subscription_id: parseInt(subscriptionId),
+                        usage_count: newCount
                     })
                 });
                 
@@ -831,7 +854,7 @@
                     const usageLog = await response.json();
                     // 成功メッセージを表示
                     const subName = subscriptions.find(sub => sub.id === subscriptionId)?.service_name || 'サブスクリプション';
-                    alert(`${subName}の利用記録を追加しました！`);
+                    alert(`${subName}の利用回数を${newCount}回に更新しました！`);
                     // サブスクリプションリストを再取得して最新の利用回数を表示
                     fetchSubscriptions();
                 } else if (response.status === 401) {
@@ -839,7 +862,7 @@
                     window.location.href = '/';
                 } else {
                     const error = await response.json();
-                    alert('エラー: ' + (error.message || '利用記録の追加に失敗しました'));
+                    alert('エラー: ' + (error.message || '利用回数の更新に失敗しました'));
                 }
             } catch (error) {
                 console.error('Error:', error);

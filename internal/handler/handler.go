@@ -83,6 +83,7 @@ type UpdateSubscriptionFormRequest struct {
 
 type CreateUsageLogRequest struct {
 	SubscriptionID int `json:"subscription_id"`
+	UsageCount     int `json:"usage_count,omitempty"` // オプショナル: 指定された場合は上書き更新
 }
 
 type UsageStatResponse struct {
@@ -565,6 +566,11 @@ func CreateUsageLogHandler(c echo.Context) error {
 	if req.SubscriptionID <= 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "Valid subscription_id is required")
 	}
+	
+	// Validate usage count if provided
+	if req.UsageCount < 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "Usage count cannot be negative")
+	}
 
 	// Get user info from JWT context (set by auth middleware)
 	userContext := c.Get("user")
@@ -578,15 +584,28 @@ func CreateUsageLogHandler(c echo.Context) error {
 		userID = userClaims.Subject
 	}
 
-	// Create usage log in database
-	usageLog, err := database.CreateUsageLog(req.SubscriptionID, userID)
-	if err != nil {
-		log.Printf("Error creating usage log: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create usage log")
+	// Check if this is an update (usage_count provided) or increment operation
+	if req.UsageCount > 0 {
+		// Update usage count to specific value
+		err := database.UpdateUsageCount(req.SubscriptionID, userID, req.UsageCount)
+		if err != nil {
+			log.Printf("Error updating usage count: %v", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update usage count")
+		}
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": "Usage count updated successfully",
+			"usage_count": req.UsageCount,
+		})
+	} else {
+		// Create usage log in database (increment by 1)
+		usageLog, err := database.CreateUsageLog(req.SubscriptionID, userID)
+		if err != nil {
+			log.Printf("Error creating usage log: %v", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create usage log")
+		}
+		// Return the created usage log
+		return c.JSON(http.StatusCreated, usageLog)
 	}
-
-	// Return the created usage log
-	return c.JSON(http.StatusCreated, usageLog)
 }
 
 func GetUsageStatsHandler(c echo.Context) error {
